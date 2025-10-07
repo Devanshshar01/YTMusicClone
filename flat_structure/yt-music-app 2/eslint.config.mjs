@@ -20,13 +20,6 @@ const eslintConfig = [
       "next-env.d.ts",
     ],
   },
-  {
-    rules: {
-      // Disable rules that cause issues in production builds
-      "@typescript-eslint/no-explicit-any": "off",
-      "react-hooks/exhaustive-deps": "off"
-    },
-  },
 ];
 
 export default eslintConfig;

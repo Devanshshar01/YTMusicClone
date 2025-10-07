@@ -1,0 +1,142 @@
+import { NextRequest } from "next/server";
+import YTMusic from "ytmusic-api";
+
+type Artist = { name?: string } | string;
+
+type ResultItem = {
+  id: string;
+  title?: string;
+  artists?: Artist[];
+  album?: unknown;
+  albumName?: string | null;
+  duration?: string | null;
+  viewsText?: string | null;
+  type?: string;
+};
+
+function asRecord(x: unknown): Record<string, unknown> {
+  return typeof x === "object" && x !== null ? (x as Record<string, unknown>) : {};
+}
+function asString(x: unknown): string | undefined {
+  return typeof x === "string" ? x : undefined;
+}
+function asNumber(x: unknown): number | undefined {
+  return typeof x === "number" ? x : undefined;
+}
+function asArray(x: unknown): unknown[] {
+  return Array.isArray(x) ? x : [];
+}
+function toDurationFromSeconds(val: unknown): string | undefined {
+  const num = typeof val === "string" ? Number(val) : asNumber(val);
+  if (typeof num !== "number" || Number.isNaN(num)) return undefined;
+  const m = Math.floor(num / 60);
+  const s = Math.floor(num % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+function extractId(r: Record<string, unknown>): string | undefined {
+  const video = asRecord(r.video);
+  return (
+    asString(r.videoId) ||
+    asString(video.videoId) ||
+    asString(r.id)
+  );
+}
+function extractTitle(r: Record<string, unknown>): string | undefined {
+  const video = asRecord(r.video);
+  const track = asRecord(r.track);
+  return asString(r.title) || asString(r.name) || asString(video.title) || asString(track.title);
+}
+function extractArtists(r: Record<string, unknown>): Artist[] {
+  // Prefer arrays if present
+  const candidates = [r.artists, asRecord(r.video).artists, asRecord(r.track).artists];
+  for (const cand of candidates) {
+    const arr = asArray(cand);
+    if (arr.length) {
+      const mapped = arr
+        .map((v) => {
+          if (typeof v === "string") return v;
+          const rec = asRecord(v);
+          const name = asString(rec.name);
+          return name ? ({ name } as Artist) : null;
+        })
+        .filter((x): x is Artist => Boolean(x));
+      if (mapped.length) return mapped;
+    }
+  }
+  // Fallback: singular "artist" object/string
+  const single = r.artist;
+  if (typeof single === "string") return [single];
+  const rec = asRecord(single);
+  const name = asString(rec.name);
+  if (name) return [{ name }];
+  return [];
+}
+function extractAlbumName(r: Record<string, unknown>): string | null {
+  const album = r.album ?? asRecord(r.track).album;
+  if (typeof album === "string") return album;
+  const rec = asRecord(album);
+  return asString(rec.name) ?? null;
+}
+function extractDuration(r: Record<string, unknown>): string | null {
+  const video = asRecord(r.video);
+  return (
+    asString(r.duration) ||
+    asString(r.length) ||
+    asString(r.lengthText) ||
+    asString(video.lengthText) ||
+    toDurationFromSeconds(video.lengthSeconds) ||
+    null
+  );
+}
+function extractViews(r: Record<string, unknown>): string | null {
+  const video = asRecord(r.video);
+  const views = r.views ?? video.views ?? r.playCount;
+  if (typeof views === "number") return views.toLocaleString();
+  if (typeof views === "string") return views;
+  return null;
+}
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const q = searchParams.get("q")?.trim();
+  if (!q) {
+    return Response.json({ error: "Missing query parameter 'q'" }, { status: 400 });
+  }
+
+  try {
+    const ytmusic = new YTMusic();
+    const cookies = process.env.YTMUSIC_COOKIES; // optional
+    await ytmusic.initialize(cookies ? { cookies } : undefined);
+
+    const results = await ytmusic.search(q);
+
+    const items: ResultItem[] = (Array.isArray(results) ? results : [])
+      .map((raw): ResultItem | null => {
+        const r = asRecord(raw);
+        const id = extractId(r);
+        if (!id) return null;
+        const title = extractTitle(r);
+        const artists = extractArtists(r);
+        const albumName = extractAlbumName(r);
+        const duration = extractDuration(r);
+        const viewsText = extractViews(r);
+        const type = asString(r.type);
+        return {
+          id,
+          title,
+          artists,
+          album: r.album,
+          albumName,
+          duration,
+          viewsText,
+          type,
+        };
+      })
+      .filter((x): x is ResultItem => Boolean(x));
+
+    return Response.json({ items });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return Response.json({ error: "ytmusic search failed", message }, { status: 500 });
+  }
+}
