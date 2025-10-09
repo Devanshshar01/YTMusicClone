@@ -99,8 +99,10 @@ function extractViews(r: Record<string, unknown>): string | null {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q")?.trim();
-  if (!q) {
-    return Response.json({ error: "Missing query parameter 'q'" }, { status: 400 });
+  const relatedTo = searchParams.get("relatedTo")?.trim();
+  
+  if (!q && !relatedTo) {
+    return Response.json({ error: "Missing query parameter 'q' or 'relatedTo'" }, { status: 400 });
   }
 
   try {
@@ -108,33 +110,76 @@ export async function GET(req: NextRequest) {
     const cookies = process.env.YTMUSIC_COOKIES; // optional
     await ytmusic.initialize(cookies ? { cookies } : undefined);
 
-    const results = await ytmusic.search(q);
+    if (relatedTo) {
+      // Get related songs by searching for the artist of the current song
+      // First, get the current song details
+      const currentSong = await ytmusic.getSong(relatedTo);
+      
+      // Extract artist name
+      let artistQuery = "";
+      if (currentSong && currentSong.artist) {
+        const artist = currentSong.artist;
+        artistQuery = typeof artist === "string" ? artist : artist.name || "";
+      }
+      
+      // Search for songs by the same artist
+      const relatedSongs = artistQuery ? await ytmusic.search(artistQuery) : [];
+      
+      const items: ResultItem[] = (Array.isArray(relatedSongs) ? relatedSongs : [])
+        .map((raw): ResultItem | null => {
+          const r = asRecord(raw);
+          const id = extractId(r);
+          if (!id) return null;
+          const title = extractTitle(r);
+          const artists = extractArtists(r);
+          const albumName = extractAlbumName(r);
+          const duration = extractDuration(r);
+          const viewsText = extractViews(r);
+          const type = asString(r.type);
+          return {
+            id,
+            title,
+            artists,
+            album: r.album,
+            albumName,
+            duration,
+            viewsText,
+            type,
+          };
+        })
+        .filter((x): x is ResultItem => Boolean(x));
 
-    const items: ResultItem[] = (Array.isArray(results) ? results : [])
-      .map((raw): ResultItem | null => {
-        const r = asRecord(raw);
-        const id = extractId(r);
-        if (!id) return null;
-        const title = extractTitle(r);
-        const artists = extractArtists(r);
-        const albumName = extractAlbumName(r);
-        const duration = extractDuration(r);
-        const viewsText = extractViews(r);
-        const type = asString(r.type);
-        return {
-          id,
-          title,
-          artists,
-          album: r.album,
-          albumName,
-          duration,
-          viewsText,
-          type,
-        };
-      })
-      .filter((x): x is ResultItem => Boolean(x));
+      return Response.json({ items });
+    } else {
+      // Regular search
+      const results = await ytmusic.search(q!);
 
-    return Response.json({ items });
+      const items: ResultItem[] = (Array.isArray(results) ? results : [])
+        .map((raw): ResultItem | null => {
+          const r = asRecord(raw);
+          const id = extractId(r);
+          if (!id) return null;
+          const title = extractTitle(r);
+          const artists = extractArtists(r);
+          const albumName = extractAlbumName(r);
+          const duration = extractDuration(r);
+          const viewsText = extractViews(r);
+          const type = asString(r.type);
+          return {
+            id,
+            title,
+            artists,
+            album: r.album,
+            albumName,
+            duration,
+            viewsText,
+            type,
+          };
+        })
+        .filter((x): x is ResultItem => Boolean(x));
+
+      return Response.json({ items });
+    }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     return Response.json({ error: "ytmusic search failed", message }, { status: 500 });

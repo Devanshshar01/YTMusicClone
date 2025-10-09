@@ -12,6 +12,7 @@ A YouTube Music clone built with Next.js 15.5.4, React, and TypeScript.
 - Popular songs section
 - Progress bar with seeking functionality
 - Responsive design for all screen sizes
+- Sidebar navigation like real YouTube Music
 
 ## Setup Instructions
 
@@ -35,14 +36,29 @@ A YouTube Music clone built with Next.js 15.5.4, React, and TypeScript.
    npm run ytmusic
    ```
 
-## Deployment to Netlify
+## Deployment Options
 
-This project is configured for deployment to Netlify with the following settings:
+### Deploy to Vercel (Recommended)
+Vercel provides full support for all Next.js features including API routes:
+1. Sign up at [vercel.com](https://vercel.com)
+2. Connect your GitHub repository
+3. Set your `YOUTUBE_API_KEY` as an environment variable
+4. Deploy!
 
-- Build command: `npm run build`
-- Publish directory: `out`
+### Deploy to Netlify
+Netlify also supports Next.js with full API route functionality:
+1. Sign up at [netlify.com](https://netlify.com)
+2. Connect your GitHub repository
+3. Configure build settings:
+   - Build command: `npm run build`
+4. Set your `YOUTUBE_API_KEY` as an environment variable
 
-The project uses the Netlify Next.js plugin for optimal deployment.
+### Deploy to GitHub Pages (Limited Functionality)
+GitHub Pages is a free static hosting service but has limitations:
+- Does NOT support API routes (server-side functionality)
+- Does NOT support server-side environment variables
+
+For full functionality, we recommend using Vercel or Netlify.
 
 ## API Endpoints
 

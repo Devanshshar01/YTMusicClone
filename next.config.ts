@@ -1,10 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Remove static export for Netlify to support API routes
+  // Remove static export configuration to allow API routes to work
   // output: "export",
-  // Remove the turbopack root configuration as it's environment-specific
-  // This will allow Next.js to auto-detect the workspace root
+  // Configure images for static export
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;

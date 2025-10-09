@@ -33,6 +33,7 @@ type YTLikePlayer = {
   getVolume?: () => number;
   getCurrentTime?: () => number;
   getDuration?: () => number;
+  seekTo?: (seconds: number, allowSeekAhead: boolean) => void;
 };
 
 const YTPlayerState = {
@@ -71,11 +72,13 @@ export default function Home() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [likedSongs, setLikedSongs] = useState<YTMusicItem[]>([]);
+  const [currentView, setCurrentView] = useState<"home" | "liked" | "recent" | "favorites">("home");
 
   const playerRef = useRef<YTLikePlayer | null>(null);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Load recent searches and theme preference from localStorage on component mount
+  // Load recent searches, theme preference, and liked songs from localStorage on component mount
   useEffect(() => {
     const savedRecentSearches = localStorage.getItem("recentSearches");
     if (savedRecentSearches) {
@@ -89,6 +92,15 @@ export default function Home() {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) {
       setDarkMode(savedTheme === "dark");
+    }
+
+    const savedLikedSongs = localStorage.getItem("likedSongs");
+    if (savedLikedSongs) {
+      try {
+        setLikedSongs(JSON.parse(savedLikedSongs));
+      } catch (e) {
+        console.error("Failed to parse liked songs", e);
+      }
     }
   }, []);
 
@@ -128,6 +140,11 @@ export default function Home() {
       document.documentElement.classList.remove("dark");
     }
   }, [darkMode]);
+
+  // Save liked songs to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("likedSongs", JSON.stringify(likedSongs));
+  }, [likedSongs]);
 
   // Progress tracking
   useEffect(() => {
@@ -196,6 +213,22 @@ export default function Home() {
 
   const current = currentIndex != null ? results[currentIndex] : null;
   const currentThumb = computeThumb(current?.id);
+
+  // Check if a song is liked
+  const isSongLiked = (songId: string) => {
+    return likedSongs.some(song => song.id === songId);
+  };
+
+  // Toggle like status for a song
+  const toggleLikeSong = (song: YTMusicItem) => {
+    if (isSongLiked(song.id)) {
+      // Remove from liked songs
+      setLikedSongs(prev => prev.filter(s => s.id !== song.id));
+    } else {
+      // Add to liked songs
+      setLikedSongs(prev => [...prev, song]);
+    }
+  };
 
   const filteredResults = results.filter((r) => {
     if (filter === "all") return true;
@@ -294,15 +327,91 @@ export default function Home() {
     const pos = (e.clientX - rect.left) / rect.width;
     const newTime = pos * duration;
     
-    // Seek to the new time (this would require YouTube API method)
-    // For now, we'll just update our local state
+    // Seek to the new time using YouTube API
+    playerRef.current.seekTo?.(newTime, true);
+    
+    // Update our local state
     setCurrentTime(newTime);
     setProgress(pos * 100);
+  }
+
+  // Skip forward 10 seconds
+  function skipForward() {
+    if (!playerRef.current || !duration) return;
+    
+    const currentTime = playerRef.current.getCurrentTime?.() || 0;
+    const newTime = Math.min(currentTime + 10, duration);
+    
+    // Seek to the new time using YouTube API
+    playerRef.current.seekTo?.(newTime, true);
+    
+    // Update our local state
+    setCurrentTime(newTime);
+    setProgress((newTime / duration) * 100);
+  }
+
+  // Skip backward 10 seconds
+  function skipBackward() {
+    if (!playerRef.current) return;
+    
+    const currentTime = playerRef.current.getCurrentTime?.() || 0;
+    const newTime = Math.max(currentTime - 10, 0);
+    
+    // Seek to the new time using YouTube API
+    playerRef.current.seekTo?.(newTime, true);
+    
+    // Update our local state
+    setCurrentTime(newTime);
+    setProgress(duration > 0 ? (newTime / duration) * 100 : 0);
   }
 
   // Toggle sidebar collapse
   function toggleSidebar() {
     setSidebarCollapsed(!sidebarCollapsed);
+  }
+
+  // Navigate back to home view
+  function goBack() {
+    setCurrentView("home");
+  }
+
+  // Function to play a related song when the current one ends
+  async function playRelatedSong() {
+    if (!current) return;
+    
+    try {
+      // Fetch related songs based on the current song
+      const res = await fetch(`/api/ytmusic?relatedTo=${current.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        const relatedSongs = data.items || [];
+        
+        // Filter out the current song and get the first related song
+        const nextSong = relatedSongs.find((song: YTMusicItem) => song.id !== current.id);
+        
+        if (nextSong) {
+          // Add the related song to the results and play it
+          const newResults = [...results, nextSong];
+          setResults(newResults);
+          setCurrentIndex(newResults.length - 1);
+          setIsPlaying(true);
+          // Reset progress when playing a new song
+          setProgress(0);
+          setCurrentTime(0);
+          setDuration(0);
+        } else {
+          // If no related song found, play the next song in the current list
+          nextTrack();
+        }
+      } else {
+        // If API call fails, play the next song in the current list
+        nextTrack();
+      }
+    } catch (e) {
+      console.error("Failed to fetch related songs", e);
+      // If we can't get related songs, just play the next song in the current list
+      nextTrack();
+    }
   }
 
   return (
@@ -357,10 +466,17 @@ export default function Home() {
             <button
               key={key}
               className={`flex items-center w-full px-4 py-3 text-sm font-medium transition-colors ${
-                key === "home" 
+                key === "home" && currentView === "home"
                   ? `${darkMode ? 'text-white bg-gray-900' : 'text-black bg-gray-200'} font-semibold` 
                   : `${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
               }`}
+              onClick={() => {
+                if (key === "library") {
+                  setCurrentView("liked");
+                } else {
+                  setCurrentView("home");
+                }
+              }}
             >
               <span className="text-lg mr-4">{icon}</span>
               {!sidebarCollapsed && <span>{label}</span>}
@@ -374,15 +490,22 @@ export default function Home() {
                 Playlists
               </div>
               {[
-                { id: "liked", name: "Liked songs", count: "24 songs" },
-                { id: "recent", name: "Recently played", count: "12 songs" },
+                { id: "liked", name: "Liked songs", count: `${likedSongs.length} songs` },
+                { id: "recent", name: "Recently played", count: `${recentSearches.length} songs` },
                 { id: "favorites", name: "Favorites", count: "8 songs" },
               ].map((playlist) => (
                 <button
                   key={playlist.id}
-                  className={`flex items-center w-full px-4 py-3 text-sm transition-colors ${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
+                  onClick={() => setCurrentView(playlist.id as "liked" | "recent" | "favorites")}
+                  className={`flex items-center w-full px-4 py-3 text-sm transition-colors ${
+                    currentView === playlist.id
+                      ? `${darkMode ? 'text-white bg-gray-900' : 'text-black bg-gray-200'} font-semibold`
+                      : `${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
+                  }`}
                 >
-                  <span className="text-lg mr-4">🎵</span>
+                  <span className="text-lg mr-4">
+                    {playlist.id === "liked" ? "♥" : playlist.id === "recent" ? "🕒" : "⭐"}
+                  </span>
                   <div className="text-left">
                     <div className="font-medium">{playlist.name}</div>
                     <div className="text-xs opacity-70">{playlist.count}</div>
@@ -400,7 +523,7 @@ export default function Home() {
               <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center mr-3">
                 <span className="text-white">👤</span>
               </div>
-              <span>Google Account</span>
+              <span>Guest</span>
             </button>
           </div>
         )}
@@ -416,7 +539,14 @@ export default function Home() {
           ] as const).map(({ key, icon }) => (
             <button
               key={key}
-              className={`p-3 ${key === "home" ? (darkMode ? 'text-white' : 'text-black') : (darkMode ? 'text-gray-400' : 'text-gray-600')}`}
+              onClick={() => {
+                if (key === "library") {
+                  setCurrentView("liked");
+                } else {
+                  setCurrentView("home");
+                }
+              }}
+              className={`p-3 ${key === "home" && currentView === "home" || key === "library" && currentView !== "home" ? (darkMode ? 'text-white' : 'text-black') : (darkMode ? 'text-gray-400' : 'text-gray-600')}`}
             >
               <span className="text-xl">{icon}</span>
             </button>
@@ -429,13 +559,25 @@ export default function Home() {
         {/* Top Bar */}
         <header className={`sticky top-0 z-10 ${darkMode ? 'bg-black' : 'bg-white'} border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
           <div className="flex items-center px-4 py-3">
-            {/* Mobile menu button */}
-            <button 
-              onClick={toggleSidebar}
-              className={`p-2 mr-2 rounded-full md:hidden ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
-            >
-              <span className="text-lg">☰</span>
-            </button>
+            {/* Back button - only visible when not on home view */}
+            {currentView !== "home" && (
+              <button 
+                onClick={goBack}
+                className={`p-2 mr-2 rounded-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+              >
+                <span className="text-lg">←</span>
+              </button>
+            )}
+            
+            {/* Mobile menu button - only visible on home view */}
+            {currentView === "home" && (
+              <button 
+                onClick={toggleSidebar}
+                className={`p-2 mr-2 rounded-full md:hidden ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+              >
+                <span className="text-lg">☰</span>
+              </button>
+            )}
             
             {/* Search Bar - Always visible on mobile, only when sidebar is collapsed on desktop */}
             <div className="flex-1 max-w-2xl">
@@ -481,8 +623,99 @@ export default function Home() {
 
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 md:pb-32">
-          {/* Recently Searched Section */}
-          {recentSearches.length > 0 && !query && (
+          {/* Show Liked Songs when "Liked songs" playlist is selected */}
+          {currentView === "liked" && likedSongs.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <h2 className="text-xl sm:text-2xl font-bold">Liked Songs</h2>
+                </div>
+                <button 
+                  onClick={() => setLikedSongs([])}
+                  className={`text-sm ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+                >
+                  Clear all
+                </button>
+              </div>
+              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
+                {likedSongs.map((song, index) => (
+                  <div
+                    key={song.id}
+                    onClick={() => {
+                      setResults(likedSongs);
+                      setCurrentIndex(index);
+                      setIsPlaying(true);
+                      setProgress(0);
+                      setCurrentTime(0);
+                      setDuration(0);
+                    }}
+                    className={`rounded-lg p-3 ${darkMode ? 'bg-gray-900 hover:bg-gray-800' : 'bg-white hover:bg-gray-100'} transition-all duration-200 cursor-pointer group`}
+                  >
+                    <div className="relative mb-3">
+                      <div className={`aspect-square rounded-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={computeThumb(song.id)} 
+                          alt={song.title || "Song"} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                            target.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}"><span class="text-2xl">♪</span></div>`;
+                          }}
+                        />
+                      </div>
+                      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        <button className={`w-8 h-8 rounded-full ${darkMode ? 'bg-red-600' : 'bg-red-500'} flex items-center justify-center shadow-lg hover:scale-105 transition-transform`}>
+                          <span className="text-white text-xs">▶</span>
+                        </button>
+                      </div>
+                    </div>
+                    <h3 className="font-medium truncate text-sm">{song.title || "Untitled"}</h3>
+                    <p className={`text-xs truncate mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {Array.isArray(song.artists) && song.artists.length
+                        ? song.artists
+                            .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
+                            .filter(Boolean)
+                            .join(", ")
+                        : "Unknown Artist"}
+                    </p>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLikeSong(song);
+                      }}
+                      className={`mt-2 text-xs ${isSongLiked(song.id) ? 'text-red-500' : darkMode ? 'text-gray-500 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                    >
+                      <span>{isSongLiked(song.id) ? '♥ Liked' : '♡ Like'}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Show message when "Liked songs" playlist is selected but empty */}
+          {currentView === "liked" && likedSongs.length === 0 && (
+            <div className="py-16 text-center">
+              <div className="flex items-center justify-center mb-4">
+                <button 
+                  onClick={goBack}
+                  className={`p-2 mr-4 rounded-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+                >
+                  <span className="text-lg">←</span>
+                </button>
+                <div className="text-5xl sm:text-6xl">♥</div>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold mb-2">No Liked Songs Yet</h2>
+              <p className={`px-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Like songs by clicking the heart icon on any song to add them to this playlist.
+              </p>
+            </div>
+          )}
+
+          {/* Recently Searched Section - Only show on home view */}
+          {currentView === "home" && recentSearches.length > 0 && !query && (
             <div className="mb-8">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl sm:text-2xl font-bold">Recently Searched</h2>
@@ -529,14 +762,29 @@ export default function Home() {
                             .join(", ")
                         : "Unknown Artist"}
                     </p>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Convert RecentSearchItem to YTMusicItem for liking
+                        const songItem: YTMusicItem = {
+                          id: item.id,
+                          title: item.title,
+                          artists: item.artists
+                        };
+                        toggleLikeSong(songItem);
+                      }}
+                      className={`mt-2 text-xs ${isSongLiked(item.id) ? 'text-red-500' : darkMode ? 'text-gray-500 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                    >
+                      <span>{isSongLiked(item.id) ? '♥ Liked' : '♡ Like'}</span>
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Popular Songs Section */}
-          {!query && popularSongs.length > 0 && (
+          {/* Popular Songs Section - Only show on home view */}
+          {currentView === "home" && !query && popularSongs.length > 0 && (
             <div className="mb-8">
               <h2 className="text-xl sm:text-2xl font-bold mb-4">Popular Songs</h2>
               <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
@@ -582,117 +830,141 @@ export default function Home() {
                             .join(", ")
                         : "Unknown Artist"}
                     </p>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleLikeSong(song);
+                      }}
+                      className={`mt-2 text-xs ${isSongLiked(song.id) ? 'text-red-500' : darkMode ? 'text-gray-500 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                    >
+                      <span>{isSongLiked(song.id) ? '♥ Liked' : '♡ Like'}</span>
+                    </button>
                   </div>
+
                 ))}
               </div>
             </div>
           )}
 
-          {/* Filter Chips */}
-          <div className="mb-6">
-            <div className="flex overflow-x-auto space-x-2 pb-2 hide-scrollbar">
-              {([
-                { key: "all", label: "All" },
-                { key: "songs", label: "Songs" },
-                { key: "videos", label: "Videos" },
-                { key: "artists", label: "Artists" },
-                { key: "albums", label: "Albums" },
-              ] as const).map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => key !== "all" && setFilter(key as "songs" | "videos" | "artists" | "albums")}
-                  className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-full transition-colors ${
-                    filter === key 
-                      ? `${darkMode ? 'bg-white text-black' : 'bg-black text-white'}` 
-                      : `${darkMode ? 'bg-gray-900 text-gray-300 hover:bg-gray-800' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Search Results */}
-          <div>
-            {error && (
-              <div className={`mb-6 p-4 text-sm rounded-lg ${darkMode ? 'bg-red-900/30 text-red-200' : 'bg-red-100 text-red-800'}`}>
-                Error: {error}
-              </div>
-            )}
-
-            {!loading && filteredResults.length === 0 && !query && recentSearches.length === 0 && popularSongs.length === 0 && (
-              <div className="py-16 text-center">
-                <div className="text-5xl sm:text-6xl mb-4">🎵</div>
-                <h2 className="text-xl sm:text-2xl font-bold mb-2">Discover Music</h2>
-                <p className={`px-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Search for your favorite songs, artists, and albums to get started.</p>
-              </div>
-            )}
-
-            {!loading && filteredResults.length === 0 && query && (
-              <div className="py-16 text-center">
-                <div className="text-5xl sm:text-6xl mb-4">🔍</div>
-                <h2 className="text-xl sm:text-2xl font-bold mb-2">No results found</h2>
-                <p className={`px-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Try different search terms or check your spelling</p>
-              </div>
-            )}
-
-            {loading && (
-              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
-                {Array.from({ length: 24 }).map((_, i) => (
-                  <div key={i} className={`rounded-lg p-3 animate-pulse ${darkMode ? 'bg-gray-900' : 'bg-gray-200'}`}>
-                    <div className={`aspect-square rounded-lg mb-3 ${darkMode ? 'bg-gray-800' : 'bg-gray-300'}`}></div>
-                    <div className={`h-4 rounded mb-2 ${darkMode ? 'bg-gray-800' : 'bg-gray-300'}`}></div>
-                    <div className={`h-3 rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-300'}`}></div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {!loading && filteredResults.length > 0 && (
-              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
-                {filteredResults.map((r, idx) => (
-                  <div
-                    key={r.id}
-                    onClick={() => playAt(idx)}
-                    className={`rounded-lg p-3 ${darkMode ? 'bg-gray-900 hover:bg-gray-800' : 'bg-white hover:bg-gray-100'} transition-all duration-200 cursor-pointer group`}
+          {/* Filter Chips - Only show on home view */}
+          {currentView === "home" && (
+            <div className="mb-6">
+              <div className="flex overflow-x-auto space-x-2 pb-2 hide-scrollbar">
+                {([
+                  { key: "all", label: "All" },
+                  { key: "songs", label: "Songs" },
+                  { key: "videos", label: "Videos" },
+                  { key: "artists", label: "Artists" },
+                  { key: "albums", label: "Albums" },
+                ] as const).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => key !== "all" && setFilter(key as "songs" | "videos" | "artists" | "albums")}
+                    className={`px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-full transition-colors ${
+                      filter === key 
+                        ? `${darkMode ? 'bg-white text-black' : 'bg-black text-white'}` 
+                        : `${darkMode ? 'bg-gray-900 text-gray-300 hover:bg-gray-800' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`
+                    }`}
                   >
-                    <div className="relative mb-3">
-                      <div className={`aspect-square rounded-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={computeThumb(r.id)} 
-                          alt={r.title ?? "art"} 
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            target.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}"><span class="text-2xl">♪</span></div>`;
-                          }}
-                        />
-                      </div>
-                      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        <button className={`w-8 h-8 rounded-full ${darkMode ? 'bg-red-600' : 'bg-red-500'} flex items-center justify-center shadow-lg hover:scale-105 transition-transform`}>
-                          <span className="text-white text-xs">▶</span>
-                        </button>
-                      </div>
-                    </div>
-                    <h3 className="font-medium truncate text-sm" title={r.title ?? "Untitled"}>
-                      {r.title ?? "Untitled"}
-                    </h3>
-                    <p className={`text-xs truncate mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      {Array.isArray(r.artists) && r.artists.length
-                        ? r.artists
-                            .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
-                            .filter(Boolean)
-                            .join(", ")
-                        : "Unknown Artist"}
-                    </p>
-                  </div>
+                    {label}
+                  </button>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Search Results - Only show on home view */}
+          {currentView === "home" && (
+            <div>
+              {error && (
+                <div className={`mb-6 p-4 text-sm rounded-lg ${darkMode ? 'bg-red-900/30 text-red-200' : 'bg-red-100 text-red-800'}`}>
+                  Error: {error}
+                </div>
+              )}
+
+              {!loading && filteredResults.length === 0 && !query && recentSearches.length === 0 && popularSongs.length === 0 && (
+                <div className="py-16 text-center">
+                  <div className="text-5xl sm:text-6xl mb-4">🎵</div>
+                  <h2 className="text-xl sm:text-2xl font-bold mb-2">Discover Music</h2>
+                  <p className={`px-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Search for your favorite songs, artists, and albums to get started.</p>
+                </div>
+              )}
+
+              {!loading && filteredResults.length === 0 && query && (
+                <div className="py-16 text-center">
+                  <div className="text-5xl sm:text-6xl mb-4">🔍</div>
+                  <h2 className="text-xl sm:text-2xl font-bold mb-2">No results found</h2>
+                  <p className={`px-4 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Try different search terms or check your spelling</p>
+                </div>
+              )}
+
+              {loading && (
+                <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
+                  {Array.from({ length: 24 }).map((_, i) => (
+                    <div key={i} className={`rounded-lg p-3 animate-pulse ${darkMode ? 'bg-gray-900' : 'bg-gray-200'}`}>
+                      <div className={`aspect-square rounded-lg mb-3 ${darkMode ? 'bg-gray-800' : 'bg-gray-300'}`}></div>
+                      <div className={`h-4 rounded mb-2 ${darkMode ? 'bg-gray-800' : 'bg-gray-300'}`}></div>
+                      <div className={`h-3 rounded ${darkMode ? 'bg-gray-800' : 'bg-gray-300'}`}></div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!loading && filteredResults.length > 0 && (
+                <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
+                  {filteredResults.map((r, idx) => (
+                    <div
+                      key={r.id}
+                      onClick={() => playAt(idx)}
+                      className={`rounded-lg p-3 ${darkMode ? 'bg-gray-900 hover:bg-gray-800' : 'bg-white hover:bg-gray-100'} transition-all duration-200 cursor-pointer group`}
+                    >
+                      <div className="relative mb-3">
+                        <div className={`aspect-square rounded-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img 
+                            src={computeThumb(r.id)} 
+                            alt={r.title ?? "art"} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              target.parentElement!.innerHTML = `<div class="w-full h-full flex items-center justify-center ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}"><span class="text-2xl">♪</span></div>`;
+                            }}
+                          />
+                        </div>
+                        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <button className={`w-8 h-8 rounded-full ${darkMode ? 'bg-red-600' : 'bg-red-500'} flex items-center justify-center shadow-lg hover:scale-105 transition-transform`}>
+                            <span className="text-white text-xs">▶</span>
+                          </button>
+                        </div>
+                      </div>
+                      <h3 className="font-medium truncate text-sm" title={r.title ?? "Untitled"}>
+                        {r.title ?? "Untitled"}
+                      </h3>
+                      <p className={`text-xs truncate mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {Array.isArray(r.artists) && r.artists.length
+                          ? r.artists
+                              .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
+                              .filter(Boolean)
+                              .join(", ")
+                          : "Unknown Artist"}
+                      </p>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleLikeSong(r);
+                        }}
+                        className={`mt-2 text-xs ${isSongLiked(r.id) ? 'text-red-500' : darkMode ? 'text-gray-500 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                      >
+                        <span>{isSongLiked(r.id) ? '♥ Liked' : '♡ Like'}</span>
+                      </button>
+                    </div>
+
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </main>
 
         {/* Enhanced Bottom Player - YouTube Music Style */}
@@ -709,10 +981,10 @@ export default function Home() {
               ></div>
             </div>
             
-            <div className={`px-4 py-3 ${darkMode ? 'bg-black border-t border-gray-800' : 'bg-white border-t border-gray-200'}`}>
-              <div className="flex items-center">
-                {/* Track info - Hidden on mobile */}
-                <div className="flex items-center w-1/4 min-w-0 hidden sm:flex">
+            <div className={`px-3 sm:px-4 py-3 ${darkMode ? 'bg-black border-t border-gray-800' : 'bg-white border-t border-gray-200'}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                {/* Track info - Responsive for mobile */}
+                <div className="flex items-center min-w-0 flex-1">
                   <div className="w-12 h-12 sm:w-14 sm:h-14 rounded mr-3">
                     {currentThumb ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -723,7 +995,7 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1 hidden xs:block">
                     <div className="font-medium truncate text-sm">{current?.title ?? "Untitled"}</div>
                     <div className={`text-xs truncate ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       {Array.isArray(current?.artists) && current?.artists.length
@@ -734,14 +1006,27 @@ export default function Home() {
                         : "Unknown Artist"}
                     </div>
                   </div>
-                  <button className={`p-2 ml-2 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
-                    <span className="text-base">♡</span>
+                  <button 
+                    onClick={() => current && toggleLikeSong(current)}
+                    className={`p-2 ml-2 ${isSongLiked(current?.id || '') ? 'text-red-500' : darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    <span className="text-base">{isSongLiked(current?.id || '') ? '♥' : '♡'}</span>
                   </button>
                 </div>
 
-                {/* Controls - YouTube Music Style */}
-                <div className="flex flex-col items-center w-full sm:w-2/4">
-                  <div className="flex items-center gap-4 sm:gap-6">
+                {/* Controls - YouTube Music Style - Center section */}
+                <div className="flex flex-col items-center flex-1">
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    {/* Skip backward button */}
+                    <button
+                      onClick={skipBackward}
+                      className={`p-1 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                      aria-label="Skip backward 10 seconds"
+                      title="Skip backward 10 seconds"
+                    >
+                      <span className="text-base">⏪</span>
+                    </button>
+                    
                     <button
                       onClick={prevTrack}
                       className={`p-1 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
@@ -749,8 +1034,9 @@ export default function Home() {
                       aria-label="Previous"
                       title="Previous"
                     >
-                      <span className="text-lg sm:text-xl">⏮</span>
+                      <span className="text-base sm:text-lg">⏮</span>
                     </button>
+                    
                     <button
                       onClick={playPause}
                       className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full ${darkMode ? 'bg-white text-black' : 'bg-black text-white'} flex items-center justify-center hover:scale-105 transition-transform`}
@@ -759,6 +1045,7 @@ export default function Home() {
                     >
                       <span className="text-sm sm:text-base">{isPlaying ? "⏸" : "▶"}</span>
                     </button>
+                    
                     <button
                       onClick={nextTrack}
                       className={`p-1 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
@@ -766,11 +1053,22 @@ export default function Home() {
                       aria-label="Next"
                       title="Next"
                     >
-                      <span className="text-lg sm:text-xl">⏭</span>
+                      <span className="text-base sm:text-lg">⏭</span>
+                    </button>
+                    
+                    {/* Skip forward button */}
+                    <button
+                      onClick={skipForward}
+                      className={`p-1 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                      aria-label="Skip forward 10 seconds"
+                      title="Skip forward 10 seconds"
+                    >
+                      <span className="text-base">⏩</span>
                     </button>
                   </div>
-                  {/* Time indicators - Hidden on mobile */}
-                  <div className="flex items-center w-full mt-2 hidden sm:flex">
+                  
+                  {/* Time indicators - Always visible now */}
+                  <div className="flex items-center w-full mt-2">
                     <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'} mr-2`}>{formatTime(currentTime)}</span>
                     <div 
                       className="flex-1 h-1 bg-gray-700 rounded-full cursor-pointer"
@@ -785,16 +1083,16 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Additional controls - Hidden on mobile */}
-                <div className="flex items-center justify-end w-1/4 hidden sm:flex">
+                {/* Additional controls - Responsive for mobile */}
+                <div className="flex items-center justify-end flex-1">
                   <button className={`p-2 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
                     <span className="text-base">🔀</span>
                   </button>
                   <button className={`p-2 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} ml-1`}>
                     <span className="text-base">🔁</span>
                   </button>
-                  <div className="flex items-center ml-4">
-                    <span className={`text-base ${darkMode ? 'text-gray-400' : 'text-gray-600'} mr-2 hidden lg:block`}>🔈</span>
+                  <div className="flex items-center ml-2 sm:ml-4">
+                    <span className={`text-base ${darkMode ? 'text-gray-400' : 'text-gray-600'} mr-2 hidden sm:block`}>🔈</span>
                     <input
                       type="range"
                       min="0"
@@ -805,7 +1103,7 @@ export default function Home() {
                         setVolume(v);
                         playerRef.current?.setVolume?.(v);
                       }}
-                      className="w-16 lg:w-20 accent-red-600"
+                      className="w-16 sm:w-20 accent-red-600"
                     />
                   </div>
                 </div>
@@ -830,7 +1128,7 @@ export default function Home() {
                 const s = (e.data ?? 0) as number;
                 setIsPlaying(s === YTPlayerState.PLAYING);
                 if (s === YTPlayerState.ENDED) {
-                  nextTrack();
+                  playRelatedSong();
                 }
               }}
               opts={{
