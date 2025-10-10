@@ -5,3 +5,10 @@
   events:
   - type: WEBHOOK
   fail_on_prepare_env_warning: true
+  actions:
+  - action: Git Push
+    type: PUSH
+    target_branch: $BUDDY_RUN_BRANCH
+    comment: $BUDDY_RUN_ID
+    targets:
+    - project_repository
