@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import YTMusic from "ytmusic-api";
 
 const YT_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
 

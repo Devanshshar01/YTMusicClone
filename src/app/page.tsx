@@ -318,7 +318,7 @@ export default function Home() {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [miniPlayer, fullScreen, shuffle, repeat, current, volume, showKeyboardShortcuts]);
+  }, [miniPlayer, fullScreen, shuffle, repeat, currentIndex, volume, showKeyboardShortcuts]);
 
   // Progress tracking
   useEffect(() => {
@@ -640,7 +640,7 @@ export default function Home() {
   }
 
   // Add song to playlist
-  function addSongToPlaylist(playlistId: string, song: YTMusicItem) {
+  function _addSongToPlaylist(playlistId: string, song: YTMusicItem) {
     setPlaylists(prev => prev.map(p => 
       p.id === playlistId 
         ? { ...p, songs: [...p.songs, song] }
@@ -649,7 +649,7 @@ export default function Home() {
   }
 
   // Remove song from playlist
-  function removeSongFromPlaylist(playlistId: string, songId: string) {
+  function _removeSongFromPlaylist(playlistId: string, songId: string) {
     setPlaylists(prev => prev.map(p => 
       p.id === playlistId 
         ? { ...p, songs: p.songs.filter(s => s.id !== songId) }
@@ -658,7 +658,7 @@ export default function Home() {
   }
 
   // Delete playlist
-  function deletePlaylist(playlistId: string) {
+  function _deletePlaylist(playlistId: string) {
     const playlist = playlists.find(p => p.id === playlistId);
     setPlaylists(prev => prev.filter(p => p.id !== playlistId));
     if (playlist) {
@@ -811,7 +811,7 @@ export default function Home() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img 
                     src={currentThumb} 
-                    alt={current?.title || \"Now Playing\"} 
+                    alt={current?.title || "Now Playing"} 
                     className={`w-full h-full rounded-2xl shadow-2xl object-cover ${isPlaying ? 'animate-[spin_20s_linear_infinite]' : ''}`}
                     style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                   />
@@ -836,14 +836,14 @@ export default function Home() {
 
           {/* Song Info */}
           <div className="px-4 sm:px-8 text-center mb-4">
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2">{current?.title || \"Untitled\"}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">{current?.title || "Untitled"}</h1>
             <p className={`text-base sm:text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
               {Array.isArray(current?.artists) && current?.artists.length
                 ? current!.artists
-                    .map((a) => (typeof a === \"string\" ? a : a?.name ?? \"\"))
+                    .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
                     .filter(Boolean)
-                    .join(\", \")
-                : \"Unknown Artist\"}
+                    .join(", ")
+                : "Unknown Artist"}
             </p>
           </div>
 
@@ -854,62 +854,62 @@ export default function Home() {
               onClick={handleProgressClick}
             >
               <div 
-                className=\"h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full relative\"
+                className="h-full bg-gradient-to-r from-red-500 to-red-600 rounded-full relative"
                 style={{ width: `${progress}%` }}
               >
-                <div className=\"absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg\"></div>
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg"></div>
               </div>
             </div>
-            <div className=\"flex justify-between mt-2 text-sm opacity-70\">
+            <div className="flex justify-between mt-2 text-sm opacity-70">
               <span>{formatTime(currentTime)}</span>
               <span>{formatTime(duration)}</span>
             </div>
           </div>
 
           {/* Controls */}
-          <div className=\"px-4 sm:px-8 pb-8 sm:pb-12\">
-            <div className=\"flex items-center justify-center gap-6 mb-6\">
+          <div className="px-4 sm:px-8 pb-8 sm:pb-12">
+            <div className="flex items-center justify-center gap-6 mb-6">
               <button
                 onClick={() => setShuffle(!shuffle)}
                 className={`p-3 rounded-full transition-all ${shuffle ? 'text-red-500' : darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
               >
-                <span className=\"text-2xl\">🔀</span>
+                <span className="text-2xl">🔀</span>
               </button>
               
               <button
                 onClick={prevTrack}
                 className={`p-3 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
               >
-                <span className=\"text-3xl\">⏮</span>
+                <span className="text-3xl">⏮</span>
               </button>
               
               <button
                 onClick={playPause}
                 className={`w-16 h-16 rounded-full ${darkMode ? 'bg-white text-black' : 'bg-black text-white'} flex items-center justify-center hover:scale-110 transition-transform shadow-2xl`}
               >
-                <span className=\"text-2xl\">{isPlaying ? \"⏸\" : \"▶\"}</span>
+                <span className="text-2xl">{isPlaying ? "⏸" : "▶"}</span>
               </button>
               
               <button
                 onClick={nextTrack}
                 className={`p-3 ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
               >
-                <span className=\"text-3xl\">⏭</span>
+                <span className="text-3xl">⏭</span>
               </button>
               
               <button
                 onClick={() => {
-                  const nextRepeat = repeat === \"off\" ? \"all\" : repeat === \"all\" ? \"one\" : \"off\";
+                  const nextRepeat = repeat === "off" ? "all" : repeat === "all" ? "one" : "off";
                   setRepeat(nextRepeat);
                 }}
-                className={`p-3 rounded-full transition-all ${repeat !== \"off\" ? 'text-red-500' : darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+                className={`p-3 rounded-full transition-all ${repeat !== "off" ? 'text-red-500' : darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
               >
-                <span className=\"text-2xl\">{repeat === \"one\" ? \"🔂\" : \"🔁\"}</span>
+                <span className="text-2xl">{repeat === "one" ? "🔂" : "🔁"}</span>
               </button>
             </div>
 
             {/* Additional Actions */}
-            <div className=\"flex items-center justify-center gap-4 text-sm\">
+            <div className="flex items-center justify-center gap-4 text-sm">
               <button 
                 onClick={() => current && toggleLikeSong(current)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full ${isSongLiked(current?.id || '') ? 'text-red-500' : darkMode ? 'text-gray-400 hover:text-white bg-gray-800' : 'text-gray-600 hover:text-gray-900 bg-gray-200'} transition-all`}
@@ -918,7 +918,7 @@ export default function Home() {
                 <span>Like</span>
               </button>
               <button 
-                onClick={() => setCurrentView(\"queue\")}
+                onClick={() => setCurrentView("queue")}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full ${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-gray-200 hover:bg-gray-300'} transition-all`}
               >
                 <span>📋</span>
@@ -976,7 +976,10 @@ export default function Home() {
             { key: "explore", label: "Explore", icon: "🔍", view: "home" },
             { key: "library", label: "Library", icon: "📚", view: "liked" },
             { key: "queue", label: "Queue", icon: "📋", view: "queue", badge: queue.length },
-          ] as const).map(({ key, label, icon, view, badge }) => (
+          ] as const).map((item) => {
+            const { key, label, icon, view } = item;
+            const badge = 'badge' in item ? item.badge : null;
+            return (
             <button
               key={key}
               className={`flex items-center w-full px-4 py-3 text-sm font-medium transition-colors relative ${
@@ -996,7 +999,8 @@ export default function Home() {
                 </span>
               )}
             </button>
-          ))}
+            );
+          })}
 
           {/* Library section */}
           {!sidebarCollapsed && (
@@ -1512,7 +1516,7 @@ export default function Home() {
                 </button>
               </div>
               <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
-                {recentSearches.map((item, index) => (
+                {recentSearches.map((item) => (
                   <div
                     key={`${item.id}-${item.timestamp}`}
                     className={`rounded-xl p-3 ${darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700' : 'bg-white hover:shadow-xl'} transition-all duration-300 cursor-pointer group relative overflow-hidden`}
