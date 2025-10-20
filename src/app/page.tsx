@@ -950,7 +950,7 @@ export default function Home() {
   }
 
   return (
-    <div className={`flex h-screen ${darkMode ? 'bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'}`}>
+    <div className={`flex h-screen ${darkMode ? 'bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'} smooth-scroll`}>
       {/* Full Screen Now Playing View */}
       {fullScreen && current && (
         <div className={`fixed inset-0 z-50 ${darkMode ? 'bg-gradient-to-br from-gray-900 via-black to-gray-900' : 'bg-gradient-to-br from-white via-gray-50 to-white'} flex flex-col`}>
@@ -1030,30 +1030,61 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Lyrics Display */}
+          {/* Enhanced Lyrics Display */}
           {showLyrics && lyrics && (
-            <div className="px-4 sm:px-8 mb-6 max-h-64 overflow-y-auto">
-              <div className="text-center space-y-2">
-                {lyrics.lines.map((line, index) => (
-                  <div
-                    key={index}
-                    className={`text-sm transition-all duration-300 ${
-                      index === currentLyricsLine
-                        ? `${darkMode ? 'text-white' : 'text-black'} font-semibold text-lg`
-                        : `${darkMode ? 'text-gray-500' : 'text-gray-600'} opacity-70`
-                    }`}
-                  >
-                    {line.text || (index === currentLyricsLine ? '♪' : '')}
-                  </div>
-                ))}
-                {lyrics.lines.length === 0 && (
-                  <div className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-                    No lyrics available for this song
-                  </div>
-                )}
-                {!lyrics.hasLyrics && lyrics.source === 'fallback' && (
-                  <div className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-500'} mt-2`}>
-                    * Generated lyrics - actual lyrics not available
+            <div className="px-4 sm:px-8 mb-6 max-h-80 overflow-y-auto">
+              <div className="relative">
+                {/* Lyrics Container with better spacing and typography */}
+                <div className="text-center space-y-3 sm:space-y-4">
+                  {lyrics.lines.map((line, index) => (
+                    <div
+                      key={index}
+                      className={`transition-all duration-500 ease-in-out transform ${
+                        index === currentLyricsLine
+                          ? `${darkMode ? 'text-white' : 'text-black'} font-bold text-lg sm:text-xl scale-105`
+                          : `${darkMode ? 'text-gray-400' : 'text-gray-500'} text-sm sm:text-base opacity-60`
+                      } ${
+                        index === currentLyricsLine 
+                          ? 'drop-shadow-lg' 
+                          : 'hover:opacity-80'
+                      }`}
+                      style={{
+                        textShadow: index === currentLyricsLine 
+                          ? darkMode 
+                            ? '0 0 20px rgba(255, 255, 255, 0.3)' 
+                            : '0 0 20px rgba(0, 0, 0, 0.2)'
+                          : 'none'
+                      }}
+                    >
+                      {line.text || (index === currentLyricsLine ? '♪' : '')}
+                    </div>
+                  ))}
+                  
+                  {/* Enhanced empty state */}
+                  {lyrics.lines.length === 0 && (
+                    <div className={`text-center py-8 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <div className="text-4xl mb-2">🎵</div>
+                      <div className="text-sm">No lyrics available for this song</div>
+                    </div>
+                  )}
+                  
+                  {/* Enhanced fallback notice */}
+                  {!lyrics.hasLyrics && lyrics.source === 'fallback' && (
+                    <div className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'} mt-4 px-4 py-2 rounded-full bg-opacity-20 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                      * Generated lyrics - actual lyrics not available
+                    </div>
+                  )}
+                </div>
+                
+                {/* Progress indicator for lyrics */}
+                {lyrics.lines.length > 0 && (
+                  <div className="mt-4 flex justify-center">
+                    <div className={`w-32 h-1 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`}>
+                      <div 
+                        className={`h-full rounded-full transition-all duration-300 ${darkMode ? 'bg-white' : 'bg-black'}`}
+                        style={{ width: `${(currentLyricsLine / lyrics.lines.length) * 100}%` }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -1142,37 +1173,37 @@ export default function Home() {
         </div>
       )}
 
-      {/* Sidebar - Hidden on mobile when collapsed */}
-      <aside className={`${sidebarCollapsed ? 'w-16 md:w-64' : 'w-64'} ${darkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} border-r flex flex-col transition-all duration-300 hidden md:flex`}>
-        {/* Logo and collapse button */}
-        <div className="flex items-center p-4">
+      {/* Enhanced Sidebar with Grid Layout */}
+      <aside className={`${sidebarCollapsed ? 'w-16 md:w-64' : 'w-64'} ${darkMode ? 'bg-gradient-to-b from-gray-900 to-black border-gray-800' : 'bg-gradient-to-b from-white to-gray-50 border-gray-200'} border-r flex flex-col transition-all duration-300 hidden md:flex shadow-xl`}>
+        {/* Enhanced Logo and collapse button */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-800/50">
           {!sidebarCollapsed && (
             <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center mr-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mr-3 shadow-lg">
                 <span className="text-white font-bold text-sm">▶</span>
               </div>
-              <h1 className="text-xl font-bold">YouTube Music</h1>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">YouTube Music</h1>
             </div>
           )}
           {sidebarCollapsed && (
-            <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
               <span className="text-white font-bold text-sm">▶</span>
             </div>
           )}
           <button 
             onClick={toggleSidebar}
-            className={`ml-auto p-1 rounded-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+            className={`p-2 rounded-xl ${darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-200/50'} transition-all duration-200 hover:scale-110`}
           >
             <span className="text-lg">{sidebarCollapsed ? '▶' : '◀'}</span>
           </button>
         </div>
 
-        {/* Search in sidebar when collapsed */}
+        {/* Enhanced Search in sidebar when collapsed */}
         {sidebarCollapsed && (
-          <div className="px-2 mb-4">
+          <div className="px-3 mb-4">
             <form onSubmit={handleSubmit} className="relative">
               <input
-                className={`w-full ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} rounded-full py-2 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-white`}
+                className={`w-full ${darkMode ? 'bg-gray-800/50 text-white' : 'bg-gray-100/50 text-gray-900'} rounded-xl py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/50 backdrop-blur-sm border ${darkMode ? 'border-gray-700/50' : 'border-gray-200/50'}`}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search"
@@ -1182,38 +1213,40 @@ export default function Home() {
           </div>
         )}
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2">
-          {([
-            { key: "home", label: "Home", icon: "🏠", view: "home" },
-            { key: "explore", label: "Explore", icon: "🔍", view: "home" },
-            { key: "library", label: "Library", icon: "📚", view: "liked" },
-            { key: "queue", label: "Queue", icon: "📋", view: "queue", badge: queue.length },
-          ] as const).map((item) => {
-            const { key, label, icon, view } = item;
-            const badge = 'badge' in item ? item.badge : null;
-            return (
-            <button
-              key={key}
-              className={`flex items-center w-full px-4 py-3 text-sm font-medium transition-colors relative ${
-                currentView === view
-                  ? `${darkMode ? 'text-white bg-gray-900' : 'text-black bg-gray-200'} font-semibold` 
-                  : `${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`
-              }`}
-              onClick={() => setCurrentView(view as typeof currentView)}
-            >
-              <span className="text-lg mr-4">{icon}</span>
-              {!sidebarCollapsed && (
-                <span className="flex-1 text-left">{label}</span>
-              )}
-              {badge !== undefined && badge > 0 && !sidebarCollapsed && (
-                <span className={`ml-auto px-2 py-0.5 text-xs rounded-full ${darkMode ? 'bg-red-600 text-white' : 'bg-red-500 text-white'}`}>
-                  {badge}
-                </span>
-              )}
-            </button>
-            );
-          })}
+        {/* Enhanced Navigation with Grid Layout */}
+        <nav className="flex-1 overflow-y-auto py-4">
+          <div className="space-y-2 px-3">
+            {([
+              { key: "home", label: "Home", icon: "🏠", view: "home" },
+              { key: "explore", label: "Explore", icon: "🔍", view: "home" },
+              { key: "library", label: "Library", icon: "📚", view: "liked" },
+              { key: "queue", label: "Queue", icon: "📋", view: "queue", badge: queue.length },
+            ] as const).map((item) => {
+              const { key, label, icon, view } = item;
+              const badge = 'badge' in item ? item.badge : null;
+              return (
+              <button
+                key={key}
+                className={`flex items-center w-full px-4 py-3 text-sm font-medium transition-all duration-200 relative rounded-xl group ${
+                  currentView === view
+                    ? `${darkMode ? 'text-white bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-500/30' : 'text-black bg-gradient-to-r from-red-100 to-pink-100 border border-red-200'} font-semibold shadow-lg` 
+                    : `${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'} hover:scale-105`
+                }`}
+                onClick={() => setCurrentView(view as typeof currentView)}
+              >
+                <span className={`text-lg mr-4 transition-transform duration-200 ${currentView === view ? 'scale-110' : 'group-hover:scale-110'}`}>{icon}</span>
+                {!sidebarCollapsed && (
+                  <span className="flex-1 text-left">{label}</span>
+                )}
+                {badge !== undefined && badge > 0 && !sidebarCollapsed && (
+                  <span className={`ml-auto px-2 py-1 text-xs rounded-full font-bold ${darkMode ? 'bg-red-600 text-white shadow-lg' : 'bg-red-500 text-white shadow-lg'} animate-pulse`}>
+                    {badge}
+                  </span>
+                )}
+              </button>
+              );
+            })}
+          </div>
 
           {/* Library section */}
           {!sidebarCollapsed && (
@@ -1275,27 +1308,30 @@ export default function Home() {
           )}
         </nav>
 
-        {/* User profile */}
+        {/* Enhanced User profile */}
         {!sidebarCollapsed && (
-          <div className="p-4 border-t border-gray-800">
-            <button className={`flex items-center w-full p-2 rounded-lg ${darkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-200'}`}>
-              <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center mr-3">
-                <span className="text-white">👤</span>
+          <div className="p-4 border-t border-gray-800/50">
+            <button className={`flex items-center w-full p-3 rounded-xl ${darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-200/50'} transition-all duration-200 hover:scale-105 group`}>
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center mr-3 shadow-lg group-hover:shadow-xl transition-all duration-200">
+                <span className="text-white text-lg">👤</span>
               </div>
-              <span>Guest</span>
+              <div className="text-left">
+                <div className="font-medium">Guest User</div>
+                <div className="text-xs opacity-70">Free Plan</div>
+              </div>
             </button>
           </div>
         )}
       </aside>
 
-      {/* Mobile Navigation - Only visible on mobile */}
+      {/* Enhanced Mobile Navigation with Grid Layout */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-20">
-        <div className={`flex justify-around items-center py-2 ${darkMode ? 'bg-black border-t border-gray-800' : 'bg-white border-t border-gray-200'}`}>
+        <div className={`grid grid-cols-3 items-center py-3 px-4 ${darkMode ? 'bg-gradient-to-t from-black to-gray-900 border-t border-gray-800/50' : 'bg-gradient-to-t from-white to-gray-50 border-t border-gray-200/50'} backdrop-blur-lg shadow-2xl`}>
           {([
-            { key: "home", icon: "🏠" },
-            { key: "explore", icon: "🔍" },
-            { key: "library", icon: "📚" },
-          ] as const).map(({ key, icon }) => (
+            { key: "home", icon: "🏠", label: "Home" },
+            { key: "explore", icon: "🔍", label: "Search" },
+            { key: "library", icon: "📚", label: "Library" },
+          ] as const).map(({ key, icon, label }) => (
             <button
               key={key}
               onClick={() => {
@@ -1305,9 +1341,14 @@ export default function Home() {
                   setCurrentView("home");
                 }
               }}
-              className={`p-3 ${key === "home" && currentView === "home" || key === "library" && currentView !== "home" ? (darkMode ? 'text-white' : 'text-black') : (darkMode ? 'text-gray-400' : 'text-gray-600')}`}
+              className={`flex flex-col items-center p-2 rounded-xl transition-all duration-200 ${
+                key === "home" && currentView === "home" || key === "library" && currentView !== "home" 
+                  ? `${darkMode ? 'text-white bg-red-500/20' : 'text-black bg-red-100'} scale-105` 
+                  : `${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'} hover:scale-105`
+              }`}
             >
-              <span className="text-xl">{icon}</span>
+              <span className="text-xl mb-1">{icon}</span>
+              <span className="text-xs font-medium">{label}</span>
             </button>
           ))}
         </div>
@@ -1414,62 +1455,127 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Lyrics Panel - Toggleable overlay */}
+        {/* Enhanced Lyrics Panel - Toggleable overlay with grid layout */}
         {showLyrics && lyrics && !fullScreen && (
-          <div className={`fixed inset-0 z-30 ${darkMode ? 'bg-black/95' : 'bg-white/95'} backdrop-blur-sm`}>
-            <div className="flex flex-col h-full">
-              {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-800">
-                <div>
-                  <h2 className="text-xl font-bold">Lyrics</h2>
-                  <p className="text-sm opacity-70">{current?.title} - {Array.isArray(current?.artists) && current?.artists.length
-                    ? current!.artists
-                        .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
-                        .filter(Boolean)
-                        .join(", ")
-                    : "Unknown Artist"}</p>
+          <div className={`fixed inset-0 z-30 ${darkMode ? 'bg-gradient-to-br from-gray-900 via-black to-gray-900' : 'bg-gradient-to-br from-white via-gray-50 to-white'} backdrop-blur-md`}>
+            <div className="grid grid-rows-[auto_1fr] h-full">
+              {/* Enhanced Header with better typography */}
+              <div className={`flex items-center justify-between p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'} backdrop-blur-sm`}>
+                <div className="flex-1">
+                  <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">
+                    Lyrics
+                  </h2>
+                  <p className="text-sm sm:text-base opacity-80 mt-1 truncate">
+                    {current?.title} - {Array.isArray(current?.artists) && current?.artists.length
+                      ? current!.artists
+                          .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
+                          .filter(Boolean)
+                          .join(", ")
+                      : "Unknown Artist"}
+                  </p>
                 </div>
                 <button
                   onClick={() => setShowLyrics(false)}
-                  className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+                  className={`p-3 rounded-full transition-all duration-200 ${darkMode ? 'hover:bg-gray-800 hover:scale-110' : 'hover:bg-gray-200 hover:scale-110'}`}
                 >
                   <span className="text-xl">✕</span>
                 </button>
               </div>
               
-              {/* Lyrics Content */}
-              <div className="flex-1 overflow-y-auto p-6">
-                <div className="max-w-2xl mx-auto text-center space-y-4">
-                  {lyrics.lines.map((line, index) => (
-                    <div
-                      key={index}
-                      className={`text-lg transition-all duration-300 ${
-                        index === currentLyricsLine
-                          ? `${darkMode ? 'text-white' : 'text-black'} font-bold text-xl`
-                          : `${darkMode ? 'text-gray-400' : 'text-gray-600'} opacity-70`
-                      }`}
-                    >
-                      {line.text || (index === currentLyricsLine ? '♪' : '')}
+              {/* Enhanced Lyrics Content with better grid layout */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="max-w-4xl mx-auto p-6">
+                  {/* Lyrics Grid Container */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Main Lyrics Display */}
+                    <div className="lg:col-span-2">
+                      <div className="text-center space-y-4 sm:space-y-6">
+                        {lyrics.lines.map((line, index) => (
+                          <div
+                            key={index}
+                            className={`transition-all duration-500 ease-in-out transform ${
+                              index === currentLyricsLine
+                                ? `${darkMode ? 'text-white' : 'text-black'} font-bold text-xl sm:text-2xl scale-105`
+                                : `${darkMode ? 'text-gray-400' : 'text-gray-500'} text-lg sm:text-xl opacity-60`
+                            } ${
+                              index === currentLyricsLine 
+                                ? 'drop-shadow-2xl' 
+                                : 'hover:opacity-80 hover:scale-102'
+                            }`}
+                            style={{
+                              textShadow: index === currentLyricsLine 
+                                ? darkMode 
+                                  ? '0 0 30px rgba(255, 255, 255, 0.4)' 
+                                  : '0 0 30px rgba(0, 0, 0, 0.3)'
+                                : 'none'
+                            }}
+                          >
+                            {line.text || (index === currentLyricsLine ? '♪' : '')}
+                          </div>
+                        ))}
+                        
+                        {/* Enhanced empty state */}
+                        {lyrics.lines.length === 0 && (
+                          <div className={`text-center py-16 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <div className="text-6xl mb-4">🎵</div>
+                            <div className="text-xl">No lyrics available for this song</div>
+                          </div>
+                        )}
+                        
+                        {/* Enhanced fallback notice */}
+                        {!lyrics.hasLyrics && lyrics.source === 'fallback' && (
+                          <div className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-400'} mt-6 px-6 py-3 rounded-full bg-opacity-20 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                            * Generated lyrics - actual lyrics not available
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                  {lyrics.lines.length === 0 && (
-                    <div className={`text-lg ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-                      No lyrics available for this song
+                    
+                    {/* Sidebar with song info and progress */}
+                    <div className="lg:col-span-1">
+                      <div className={`sticky top-6 ${darkMode ? 'bg-gray-800/50' : 'bg-white/50'} backdrop-blur-sm rounded-2xl p-6 border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                        {/* Song Info */}
+                        <div className="text-center mb-6">
+                          <div className="text-4xl mb-4">🎵</div>
+                          <h3 className="text-lg font-bold mb-2">{current?.title}</h3>
+                          <p className="text-sm opacity-70">
+                            {Array.isArray(current?.artists) && current?.artists.length
+                              ? current!.artists
+                                  .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
+                                  .filter(Boolean)
+                                  .join(", ")
+                              : "Unknown Artist"}
+                          </p>
+                        </div>
+                        
+                        {/* Lyrics Progress */}
+                        {lyrics.lines.length > 0 && (
+                          <div className="space-y-4">
+                            <div className="text-sm font-medium opacity-70">Lyrics Progress</div>
+                            <div className={`w-full h-2 rounded-full ${darkMode ? 'bg-gray-700' : 'bg-gray-300'}`}>
+                              <div 
+                                className={`h-full rounded-full transition-all duration-300 bg-gradient-to-r from-red-500 to-pink-500`}
+                                style={{ width: `${(currentLyricsLine / lyrics.lines.length) * 100}%` }}
+                              />
+                            </div>
+                            <div className="text-xs opacity-60 text-center">
+                              {currentLyricsLine + 1} of {lyrics.lines.length} lines
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  {!lyrics.hasLyrics && lyrics.source === 'fallback' && (
-                    <div className={`text-sm ${darkMode ? 'text-gray-600' : 'text-gray-500'} mt-8`}>
-                      * Generated lyrics - actual lyrics not available
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 md:pb-32">
+        {/* Enhanced Content Area with Grid Layout */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 md:pb-32 smooth-scroll">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 gap-6">
           {/* Create Playlist Modal */}
           {showCreatePlaylist && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
@@ -1683,11 +1789,11 @@ export default function Home() {
                   Clear all
                 </button>
               </div>
-              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 sm:gap-6">
                 {likedSongs.map((song, index) => (
                   <div
                     key={song.id}
-                    className={`rounded-xl p-3 ${darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700' : 'bg-white hover:shadow-xl'} transition-all duration-300 cursor-pointer group relative overflow-hidden`}
+                    className={`rounded-2xl p-4 ${darkMode ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 hover:from-gray-800/90 hover:to-gray-700/90' : 'bg-white/80 hover:bg-white/90'} backdrop-blur-sm border ${darkMode ? 'border-gray-700/50 hover:border-gray-600/50' : 'border-gray-200/50 hover:border-gray-300/50'} shadow-lg hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 cursor-pointer group relative overflow-hidden hover:scale-105 hover:-translate-y-2`}
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                     
@@ -1702,7 +1808,7 @@ export default function Home() {
                         setDuration(0);
                       }}
                     >
-                      <div className={`aspect-square rounded-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-gray-200'} shadow-lg`}>
+                      <div className={`aspect-square rounded-xl overflow-hidden ${darkMode ? 'bg-gray-800/50' : 'bg-gray-200/50'} shadow-xl group-hover:shadow-2xl transition-all duration-500`}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           src={computeThumb(song.id)} 
@@ -1722,8 +1828,8 @@ export default function Home() {
                       </div>
                     </div>
                     
-                    <h3 className="font-medium truncate text-sm mt-3 relative z-10">{song.title || "Untitled"}</h3>
-                    <p className={`text-xs truncate mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'} relative z-10`}>
+                    <h3 className="font-semibold truncate text-sm mt-3 relative z-10 group-hover:text-red-500 transition-colors duration-300">{song.title || "Untitled"}</h3>
+                    <p className={`text-xs truncate mt-1 ${darkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'} relative z-10 transition-colors duration-300`}>
                       {Array.isArray(song.artists) && song.artists.length
                         ? song.artists
                             .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
@@ -1783,11 +1889,11 @@ export default function Home() {
                   Clear all
                 </button>
               </div>
-              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 sm:gap-6">
                 {recentSearches.map((item) => (
                   <div
                     key={`${item.id}-${item.timestamp}`}
-                    className={`rounded-xl p-3 ${darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700' : 'bg-white hover:shadow-xl'} transition-all duration-300 cursor-pointer group relative overflow-hidden`}
+                    className={`rounded-2xl p-4 ${darkMode ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 hover:from-gray-800/90 hover:to-gray-700/90' : 'bg-white/80 hover:bg-white/90'} backdrop-blur-sm border ${darkMode ? 'border-gray-700/50 hover:border-gray-600/50' : 'border-gray-200/50 hover:border-gray-300/50'} shadow-lg hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 cursor-pointer group relative overflow-hidden hover:scale-105 hover:-translate-y-2`}
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                     
@@ -1795,7 +1901,7 @@ export default function Home() {
                       className="relative"
                       onClick={() => playRecentSearch(item)}
                     >
-                      <div className={`aspect-square rounded-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-gray-200'} shadow-lg`}>
+                      <div className={`aspect-square rounded-xl overflow-hidden ${darkMode ? 'bg-gray-800/50' : 'bg-gray-200/50'} shadow-xl group-hover:shadow-2xl transition-all duration-500`}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           src={computeThumb(item.id)} 
@@ -1915,16 +2021,16 @@ export default function Home() {
                   Clear all
                 </button>
               </div>
-              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 sm:gap-6">
                 {recentSearches.map((item) => (
                   <div
                     key={`${item.id}-${item.timestamp}`}
-                    className={`rounded-xl p-3 ${darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700' : 'bg-white hover:shadow-xl'} transition-all duration-300 cursor-pointer group relative overflow-hidden`}
+                    className={`rounded-2xl p-4 ${darkMode ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 hover:from-gray-800/90 hover:to-gray-700/90' : 'bg-white/80 hover:bg-white/90'} backdrop-blur-sm border ${darkMode ? 'border-gray-700/50 hover:border-gray-600/50' : 'border-gray-200/50 hover:border-gray-300/50'} shadow-lg hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 cursor-pointer group relative overflow-hidden hover:scale-105 hover:-translate-y-2`}
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                     
                     <div className="relative" onClick={() => playRecentSearch(item)}>
-                      <div className={`aspect-square rounded-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-gray-200'} shadow-lg`}>
+                      <div className={`aspect-square rounded-xl overflow-hidden ${darkMode ? 'bg-gray-800/50' : 'bg-gray-200/50'} shadow-xl group-hover:shadow-2xl transition-all duration-500`}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           src={computeThumb(item.id)} 
@@ -2010,11 +2116,11 @@ export default function Home() {
           {currentView === "home" && !query && popularSongs.length > 0 && (
             <div className="mb-8">
               <h2 className="text-xl sm:text-2xl font-bold mb-4">Popular Songs</h2>
-              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 sm:gap-6">
                 {popularSongs.slice(0, 24).map((song, index) => (
                   <div
                     key={song.id}
-                    className={`rounded-xl p-3 ${darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700' : 'bg-white hover:shadow-xl'} transition-all duration-300 cursor-pointer group relative overflow-hidden`}
+                    className={`rounded-2xl p-4 ${darkMode ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 hover:from-gray-800/90 hover:to-gray-700/90' : 'bg-white/80 hover:bg-white/90'} backdrop-blur-sm border ${darkMode ? 'border-gray-700/50 hover:border-gray-600/50' : 'border-gray-200/50 hover:border-gray-300/50'} shadow-lg hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 cursor-pointer group relative overflow-hidden hover:scale-105 hover:-translate-y-2`}
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                     
@@ -2029,7 +2135,7 @@ export default function Home() {
                         setDuration(0);
                       }}
                     >
-                      <div className={`aspect-square rounded-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-gray-200'} shadow-lg`}>
+                      <div className={`aspect-square rounded-xl overflow-hidden ${darkMode ? 'bg-gray-800/50' : 'bg-gray-200/50'} shadow-xl group-hover:shadow-2xl transition-all duration-500`}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           src={computeThumb(song.id)} 
@@ -2049,8 +2155,8 @@ export default function Home() {
                       </div>
                     </div>
                     
-                    <h3 className="font-medium truncate text-sm mt-3 relative z-10">{song.title || "Untitled"}</h3>
-                    <p className={`text-xs truncate mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'} relative z-10`}>
+                    <h3 className="font-semibold truncate text-sm mt-3 relative z-10 group-hover:text-red-500 transition-colors duration-300">{song.title || "Untitled"}</h3>
+                    <p className={`text-xs truncate mt-1 ${darkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'} relative z-10 transition-colors duration-300`}>
                       {Array.isArray(song.artists) && song.artists.length
                         ? song.artists
                             .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
@@ -2149,7 +2255,7 @@ export default function Home() {
               )}
 
               {loading && (
-                <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 sm:gap-6">
                   {Array.from({ length: 24 }).map((_, i) => (
                     <div key={i} className={`rounded-lg p-3 animate-pulse ${darkMode ? 'bg-gray-900' : 'bg-gray-200'}`}>
                       <div className={`aspect-square rounded-lg mb-3 ${darkMode ? 'bg-gray-800' : 'bg-gray-300'}`}></div>
@@ -2161,17 +2267,17 @@ export default function Home() {
               )}
 
               {!loading && filteredResults.length > 0 && (
-                <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 2xl:grid-cols-8 gap-3 sm:gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-4 sm:gap-6">
                   {filteredResults.map((r, idx) => (
                     <div
                       key={r.id}
-                      className={`rounded-xl p-3 ${darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 hover:from-gray-800 hover:to-gray-700' : 'bg-white hover:shadow-xl'} transition-all duration-300 cursor-pointer group relative overflow-hidden`}
+                      className={`rounded-2xl p-4 ${darkMode ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 hover:from-gray-800/90 hover:to-gray-700/90' : 'bg-white/80 hover:bg-white/90'} backdrop-blur-sm border ${darkMode ? 'border-gray-700/50 hover:border-gray-600/50' : 'border-gray-200/50 hover:border-gray-300/50'} shadow-lg hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 cursor-pointer group relative overflow-hidden hover:scale-105 hover:-translate-y-2`}
                     >
                       {/* Gradient overlay on hover */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                       
                       <div className="relative" onClick={() => playAt(idx)}>
-                        <div className={`aspect-square rounded-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-gray-200'} shadow-lg`}>
+                        <div className={`aspect-square rounded-xl overflow-hidden ${darkMode ? 'bg-gray-800/50' : 'bg-gray-200/50'} shadow-xl group-hover:shadow-2xl transition-all duration-500`}>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img 
                             src={computeThumb(r.id)} 
@@ -2191,10 +2297,10 @@ export default function Home() {
                         </div>
                       </div>
                       
-                      <h3 className="font-medium truncate text-sm mt-3 relative z-10" title={r.title ?? "Untitled"}>
+                      <h3 className="font-semibold truncate text-sm mt-3 relative z-10 group-hover:text-red-500 transition-colors duration-300" title={r.title ?? "Untitled"}>
                         {r.title ?? "Untitled"}
                       </h3>
-                      <p className={`text-xs truncate mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'} relative z-10`}>
+                      <p className={`text-xs truncate mt-1 ${darkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'} relative z-10 transition-colors duration-300`}>
                         {Array.isArray(r.artists) && r.artists.length
                           ? r.artists
                               .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
@@ -2240,25 +2346,27 @@ export default function Home() {
               )}
             </div>
           )}
+            </div>
+          </div>
         </main>
 
         {/* Enhanced Bottom Player - YouTube Music Style */}
         {current && !fullScreen && (
           <footer className="fixed bottom-0 left-0 right-0 z-20 backdrop-blur-lg">
-            {/* Progress bar */}
+            {/* Enhanced Progress bar */}
             <div 
-              className={`h-1.5 w-full ${darkMode ? 'bg-gray-800' : 'bg-gray-300'} cursor-pointer hover:h-2 transition-all duration-200`}
+              className={`h-2 w-full ${darkMode ? 'bg-gray-800/50' : 'bg-gray-300/50'} cursor-pointer hover:h-3 transition-all duration-200`}
               onClick={handleProgressClick}
             >
               <div 
-                className="h-full bg-gradient-to-r from-red-500 via-red-600 to-red-500 relative" 
+                className="h-full bg-gradient-to-r from-red-500 via-red-600 to-red-500 relative shadow-lg" 
                 style={{ width: `${progress}%` }}
               >
-                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg opacity-0 hover:opacity-100 transition-opacity"></div>
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-xl opacity-0 hover:opacity-100 transition-all duration-200 hover:scale-125"></div>
               </div>
             </div>
             
-            <div className={`px-3 sm:px-4 py-3 ${darkMode ? 'bg-black/90 border-t border-gray-800' : 'bg-white/90 border-t border-gray-200'}`}>
+            <div className={`px-4 sm:px-6 py-4 ${darkMode ? 'bg-gradient-to-t from-black/95 to-gray-900/95 border-t border-gray-800/50' : 'bg-gradient-to-t from-white/95 to-gray-50/95 border-t border-gray-200/50'} backdrop-blur-xl`}>
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 {/* Track info - Responsive for mobile */}
                 <div className="flex items-center min-w-0 flex-1">
