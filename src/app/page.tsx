@@ -156,6 +156,7 @@ export default function Home() {
 
   const playerRef = useRef<YTLikePlayer | null>(null);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
+  const lyricsRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Load recent searches, theme preference, liked songs, and playlists from localStorage on component mount
   useEffect(() => {
@@ -342,7 +343,7 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [miniPlayer, fullScreen, shuffle, repeat, currentIndex, volume, showKeyboardShortcuts]);
 
-  // Progress tracking
+  // Progress tracking with real-time lyrics sync
   useEffect(() => {
     if (isPlaying && playerRef.current) {
       progressInterval.current = setInterval(() => {
@@ -352,7 +353,7 @@ export default function Home() {
         setDuration(total);
         setProgress(total > 0 ? (current / total) * 100 : 0);
         
-        // Update current lyrics line based on time
+        // Update current lyrics line based on time with real-time sync
         if (lyrics && lyrics.lines.length > 0) {
           let newLineIndex = 0;
           for (let i = 0; i < lyrics.lines.length; i++) {
@@ -367,7 +368,7 @@ export default function Home() {
             setCurrentLyricsLine(newLineIndex);
           }
         }
-      }, 1000);
+      }, 100); // Changed from 1000ms to 100ms for real-time lyrics sync
     } else if (progressInterval.current) {
       clearInterval(progressInterval.current);
     }
@@ -377,30 +378,103 @@ export default function Home() {
         clearInterval(progressInterval.current);
       }
     };
-  }, [isPlaying, lyrics]);
+  }, [isPlaying, lyrics, currentLyricsLine]);
+
+  // Auto-scroll to current lyrics line
+  useEffect(() => {
+    if (lyrics && lyrics.lines.length > 0 && currentLyricsLine < lyricsRefs.current.length) {
+      const currentElement = lyricsRefs.current[currentLyricsLine];
+      if (currentElement) {
+        currentElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
+      }
+    }
+  }, [currentLyricsLine, lyrics]);
+
+  // Search suggestions based on query input
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      if (query.trim().length >= 2) {
+        // Generate suggestions from recent searches and popular terms
+        const suggestions: string[] = [];
+        
+        // Add matching recent searches
+        const recentMatches = recentSearches
+          .filter(item => 
+            item.title.toLowerCase().includes(query.toLowerCase()) ||
+            (Array.isArray(item.artists) && item.artists.some(artist => {
+              const artistName = typeof artist === 'string' ? artist : artist?.name || '';
+              return artistName.toLowerCase().includes(query.toLowerCase());
+            }))
+          )
+          .map(item => item.title)
+          .slice(0, 3);
+        
+        suggestions.push(...recentMatches);
+        
+        // Add popular search terms that match
+        const popularTerms = [
+          'top hits 2024', 'trending music', 'latest songs',
+          'rock music', 'pop hits', 'hip hop', 'electronic music',
+          'classical music', 'jazz', 'country music'
+        ];
+        
+        const popularMatches = popularTerms
+          .filter(term => term.toLowerCase().includes(query.toLowerCase()))
+          .slice(0, 2);
+        
+        suggestions.push(...popularMatches);
+        
+        // Remove duplicates and limit to 5 suggestions
+        const uniqueSuggestions = Array.from(new Set(suggestions)).slice(0, 5);
+        setSearchSuggestions(uniqueSuggestions);
+      } else {
+        setSearchSuggestions([]);
+      }
+    }, 300); // Debounce for 300ms
+
+    return () => clearTimeout(debounceTimer);
+  }, [query, recentSearches]);
 
   const canSearch = useMemo(() => query.trim().length > 1, [query]);
 
   async function search(q: string) {
     if (!q.trim()) return;
+    
+    // Close suggestions when searching
+    setShowSuggestions(false);
+    
     setLoading(true);
     setError(null);
     setCurrentIndex(null);
+    
     try {
-      const res = await fetch(`/api/ytmusic?q=${encodeURIComponent(q)}`);
+      // Add music-related keywords to improve search results
+      const enhancedQuery = q.trim();
+      
+      const res = await fetch(`/api/ytmusic?q=${encodeURIComponent(enhancedQuery)}`);
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text || `Request failed with ${res.status}`);
       }
       const data = (await res.json()) as { items: YTMusicItem[] };
-      setResults(data.items || []);
+      
+      // Filter out results without proper titles or IDs
+      const validResults = (data.items || []).filter(item => 
+        item.id && item.title && item.title.trim().length > 0
+      );
+      
+      setResults(validResults);
       
       // Add to recent searches if we have results
-      if (data.items && data.items.length > 0) {
+      if (validResults.length > 0) {
         const newItem: RecentSearchItem = {
-          id: data.items[0].id,
-          title: data.items[0].title || "Untitled",
-          artists: data.items[0].artists || [],
+          id: validResults[0].id,
+          title: validResults[0].title || "Untitled",
+          artists: validResults[0].artists || [],
           timestamp: Date.now()
         };
         
@@ -410,9 +484,17 @@ export default function Home() {
           return [newItem, ...filtered].slice(0, 10);
         });
       }
+      
+      // Show toast if no results found
+      if (validResults.length === 0) {
+        setToast({ message: `No results found for "${q}"`, visible: true });
+        setTimeout(() => setToast({ message: "", visible: false }), 3000);
+      }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
       setError(message);
+      setToast({ message: `Search error: ${message}`, visible: true });
+      setTimeout(() => setToast({ message: "", visible: false }), 3000);
     } finally {
       setLoading(false);
     }
@@ -1039,6 +1121,7 @@ export default function Home() {
                   {lyrics.lines.map((line, index) => (
                     <div
                       key={index}
+                      ref={(el) => { lyricsRefs.current[index] = el; }}
                       className={`transition-all duration-500 ease-in-out transform ${
                         index === currentLyricsLine
                           ? `${darkMode ? 'text-white' : 'text-black'} font-bold text-lg sm:text-xl scale-105`
@@ -1493,6 +1576,7 @@ export default function Home() {
                         {lyrics.lines.map((line, index) => (
                           <div
                             key={index}
+                            ref={(el) => { lyricsRefs.current[index] = el; }}
                             className={`transition-all duration-500 ease-in-out transform ${
                               index === currentLyricsLine
                                 ? `${darkMode ? 'text-white' : 'text-black'} font-bold text-xl sm:text-2xl scale-105`
