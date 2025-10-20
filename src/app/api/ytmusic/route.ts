@@ -151,7 +151,7 @@ export async function GET(req: NextRequest) {
 
       return Response.json({ items });
     } else {
-      // Regular search
+      // Regular search with better filtering
       const results = await ytmusic.search(q!);
 
       const items: ResultItem[] = (Array.isArray(results) ? results : [])
@@ -178,7 +178,44 @@ export async function GET(req: NextRequest) {
         })
         .filter((x): x is ResultItem => Boolean(x));
 
-      return Response.json({ items });
+      // Sort results to prioritize songs and music content
+      const sortedItems = items.sort((a, b) => {
+        // Priority order: song > video (with duration) > others
+        const typeOrder: Record<string, number> = {
+          'song': 1,
+          'video': 2,
+          'album': 3,
+          'artist': 4,
+          'playlist': 5
+        };
+        
+        const aOrder = typeOrder[a.type?.toLowerCase() || ''] || 99;
+        const bOrder = typeOrder[b.type?.toLowerCase() || ''] || 99;
+        
+        if (aOrder !== bOrder) {
+          return aOrder - bOrder;
+        }
+        
+        // For same type, prioritize items with duration (actual playable content)
+        const aDuration = a.duration ? 1 : 0;
+        const bDuration = b.duration ? 1 : 0;
+        
+        return bDuration - aDuration;
+      });
+
+      // Filter to include primarily songs and videos with duration
+      const filteredItems = sortedItems.filter(item => {
+        // Always include songs
+        if (item.type?.toLowerCase() === 'song') return true;
+        // Include videos with duration (likely music videos)
+        if (item.type?.toLowerCase() === 'video' && item.duration) return true;
+        // Include if it has artists (likely music content)
+        if (item.artists && item.artists.length > 0) return true;
+        // Otherwise only include if we have less than 5 items
+        return sortedItems.length < 5;
+      });
+
+      return Response.json({ items: filteredItems });
     }
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
