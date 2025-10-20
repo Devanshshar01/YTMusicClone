@@ -11,28 +11,6 @@ type LyricsData = {
   source?: string;
 };
 
-// Function to parse LRC format lyrics
-function parseLRC(lrcText: string): LyricsLine[] {
-  const lines = lrcText.split('\n');
-  const lyricsLines: LyricsLine[] = [];
-  
-  for (const line of lines) {
-    const match = line.match(/^\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)$/);
-    if (match) {
-      const minutes = parseInt(match[1]);
-      const seconds = parseInt(match[2]);
-      const milliseconds = parseInt(match[3].padEnd(3, '0'));
-      const time = minutes * 60 + seconds + milliseconds / 1000;
-      const text = match[4].trim();
-      
-      if (text) {
-        lyricsLines.push({ time, text });
-      }
-    }
-  }
-  
-  return lyricsLines.sort((a, b) => a.time - b.time);
-}
 
 // Function to generate fallback lyrics based on song title and artist
 function generateFallbackLyrics(title: string, artist: string): LyricsLine[] {
@@ -119,7 +97,6 @@ async function fetchLyrics(songTitle: string, artist: string): Promise<LyricsDat
       );
       
       if (musixmatchResponse.ok) {
-        const data = await musixmatchResponse.json();
         // This would require API key setup, so we'll skip for now
       }
     } catch (e) {
@@ -140,7 +117,6 @@ async function fetchLyrics(songTitle: string, artist: string): Promise<LyricsDat
       );
       
       if (geniusResponse.ok) {
-        const data = await geniusResponse.json();
         // This would require API key setup, so we'll skip for now
       }
     } catch (e) {
