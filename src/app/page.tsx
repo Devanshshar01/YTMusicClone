@@ -72,6 +72,18 @@ type RecentSearchItem = {
   timestamp: number;
 };
 
+// Type for lyrics
+type LyricsLine = {
+  time: number;
+  text: string;
+};
+
+type LyricsData = {
+  lines: LyricsLine[];
+  hasLyrics: boolean;
+  source?: string;
+};
+
 // Minimal player type to avoid 'any'
 type YTLikePlayer = {
   playVideo?: () => void;
@@ -137,6 +149,10 @@ export default function Home() {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
+  const [lyrics, setLyrics] = useState<LyricsData | null>(null);
+  const [currentLyricsLine, setCurrentLyricsLine] = useState<number>(0);
+  const [showLyrics, setShowLyrics] = useState(false);
+  const [lyricsLoading, setLyricsLoading] = useState(false);
 
   const playerRef = useRef<YTLikePlayer | null>(null);
   const progressInterval = useRef<NodeJS.Timeout | null>(null);
@@ -313,6 +329,12 @@ export default function Home() {
           e.preventDefault();
           setShowKeyboardShortcuts(!showKeyboardShortcuts);
           break;
+        case 'y':
+        case 'Y':
+          if (current) {
+            setShowLyrics(!showLyrics);
+          }
+          break;
       }
     };
 
@@ -329,6 +351,22 @@ export default function Home() {
         setCurrentTime(current);
         setDuration(total);
         setProgress(total > 0 ? (current / total) * 100 : 0);
+        
+        // Update current lyrics line based on time
+        if (lyrics && lyrics.lines.length > 0) {
+          let newLineIndex = 0;
+          for (let i = 0; i < lyrics.lines.length; i++) {
+            if (lyrics.lines[i].time <= current) {
+              newLineIndex = i;
+            } else {
+              break;
+            }
+          }
+          // Only update if the line actually changed to avoid unnecessary re-renders
+          if (newLineIndex !== currentLyricsLine) {
+            setCurrentLyricsLine(newLineIndex);
+          }
+        }
       }, 1000);
     } else if (progressInterval.current) {
       clearInterval(progressInterval.current);
@@ -339,7 +377,7 @@ export default function Home() {
         clearInterval(progressInterval.current);
       }
     };
-  }, [isPlaying]);
+  }, [isPlaying, lyrics]);
 
   const canSearch = useMemo(() => query.trim().length > 1, [query]);
 
@@ -423,6 +461,20 @@ export default function Home() {
     setProgress(0);
     setCurrentTime(0);
     setDuration(0);
+    setCurrentLyricsLine(0);
+    
+    // Fetch lyrics for the new song
+    const song = results[index];
+    if (song) {
+      const artistName = Array.isArray(song.artists) && song.artists.length
+        ? song.artists
+            .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
+            .filter(Boolean)
+            .join(", ")
+        : "Unknown Artist";
+      
+      fetchLyrics(song.id, song.title || "Untitled", artistName);
+    }
   }
 
   // Function to play a recent search item
@@ -441,6 +493,17 @@ export default function Home() {
     setProgress(0);
     setCurrentTime(0);
     setDuration(0);
+    setCurrentLyricsLine(0);
+    
+    // Fetch lyrics for the song
+    const artistName = Array.isArray(item.artists) && item.artists.length
+      ? item.artists
+          .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
+          .filter(Boolean)
+          .join(", ")
+      : "Unknown Artist";
+    
+    fetchLyrics(item.id, item.title, artistName);
   }
 
   function playPause() {
@@ -474,6 +537,17 @@ export default function Home() {
       setProgress(0);
       setCurrentTime(0);
       setDuration(0);
+      setCurrentLyricsLine(0);
+      
+      // Fetch lyrics for the new song
+      const artistName = Array.isArray(nextSong.artists) && nextSong.artists.length
+        ? nextSong.artists
+            .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
+            .filter(Boolean)
+            .join(", ")
+        : "Unknown Artist";
+      
+      fetchLyrics(nextSong.id, nextSong.title || "Untitled", artistName);
       return;
     }
 
@@ -502,10 +576,32 @@ export default function Home() {
     if (shuffle) {
       const randomIndex = Math.floor(Math.random() * results.length);
       setCurrentIndex(randomIndex);
+      const song = results[randomIndex];
+      if (song) {
+        const artistName = Array.isArray(song.artists) && song.artists.length
+          ? song.artists
+              .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
+              .filter(Boolean)
+              .join(", ")
+          : "Unknown Artist";
+        
+        fetchLyrics(song.id, song.title || "Untitled", artistName);
+      }
     } else {
       setCurrentIndex((idx) => {
         const i = typeof idx === "number" ? idx : 0;
         const p = (i - 1 + results.length) % results.length;
+        const song = results[p];
+        if (song) {
+          const artistName = Array.isArray(song.artists) && song.artists.length
+            ? song.artists
+                .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
+                .filter(Boolean)
+                .join(", ")
+            : "Unknown Artist";
+          
+          fetchLyrics(song.id, song.title || "Untitled", artistName);
+        }
         return p;
       });
     }
@@ -514,6 +610,7 @@ export default function Home() {
     setProgress(0);
     setCurrentTime(0);
     setDuration(0);
+    setCurrentLyricsLine(0);
   }
 
   // Clear recent searches
@@ -726,6 +823,77 @@ export default function Home() {
     }
   };
 
+  // Function to fetch lyrics for a song
+  async function fetchLyrics(songId: string, title: string, artist: string) {
+    if (!songId || !title || !artist) return;
+    
+    // Clear existing lyrics and show loading
+    setLyrics(null);
+    setCurrentLyricsLine(0);
+    setLyricsLoading(true);
+    
+    try {
+      const response = await fetch(`/api/lyrics?songId=${encodeURIComponent(songId)}&title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setLyrics(data);
+        setCurrentLyricsLine(0);
+      } else {
+        console.error('Failed to fetch lyrics');
+        // Set fallback lyrics instead of null
+        setLyrics({
+          lines: generateFallbackLyrics(title, artist),
+          hasLyrics: false,
+          source: 'fallback'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching lyrics:', error);
+      // Set fallback lyrics instead of null
+      setLyrics({
+        lines: generateFallbackLyrics(title, artist),
+        hasLyrics: false,
+        source: 'fallback'
+      });
+    } finally {
+      setLyricsLoading(false);
+    }
+  }
+
+  // Helper function to generate fallback lyrics (moved from API)
+  function generateFallbackLyrics(title: string, artist: string): LyricsLine[] {
+    return [
+      { time: 0, text: `♪ ${title} ♪` },
+      { time: 3, text: `by ${artist}` },
+      { time: 6, text: "" },
+      { time: 8, text: "♪ ♪ ♪" },
+      { time: 11, text: "♪ ♪ ♪" },
+      { time: 14, text: "♪ ♪ ♪" },
+      { time: 17, text: "" },
+      { time: 19, text: `♪ ${title} ♪` },
+      { time: 22, text: "♪ ♪ ♪" },
+      { time: 25, text: "♪ ♪ ♪" },
+      { time: 28, text: "♪ ♪ ♪" },
+      { time: 31, text: "" },
+      { time: 33, text: "♪ Instrumental ♪" },
+      { time: 36, text: "♪ ♪ ♪" },
+      { time: 39, text: "♪ ♪ ♪" },
+      { time: 42, text: "♪ ♪ ♪" },
+      { time: 45, text: "" },
+      { time: 47, text: `♪ ${title} ♪` },
+      { time: 50, text: "♪ ♪ ♪" },
+      { time: 53, text: "♪ ♪ ♪" },
+      { time: 56, text: "♪ ♪ ♪" },
+      { time: 59, text: "" },
+      { time: 61, text: "♪ Outro ♪" },
+      { time: 64, text: "♪ ♪ ♪" },
+      { time: 67, text: "♪ ♪ ♪" },
+      { time: 70, text: "♪ ♪ ♪" },
+      { time: 73, text: "" },
+      { time: 75, text: "♪ Fade out ♪" },
+    ];
+  }
+
   // Function to play a related song when the current one ends
   async function playRelatedSong() {
     if (!current) return;
@@ -845,7 +1013,52 @@ export default function Home() {
                     .join(", ")
                 : "Unknown Artist"}
             </p>
+            
+            {/* Lyrics Toggle Button */}
+            <button
+              onClick={() => setShowLyrics(!showLyrics)}
+              disabled={lyricsLoading}
+              className={`mt-4 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                showLyrics 
+                  ? 'bg-red-500 text-white' 
+                  : darkMode 
+                    ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              } ${lyricsLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {lyricsLoading ? '⏳ Loading Lyrics...' : showLyrics ? '🎵 Hide Lyrics' : '🎵 Show Lyrics'}
+            </button>
           </div>
+
+          {/* Lyrics Display */}
+          {showLyrics && lyrics && (
+            <div className="px-4 sm:px-8 mb-6 max-h-64 overflow-y-auto">
+              <div className="text-center space-y-2">
+                {lyrics.lines.map((line, index) => (
+                  <div
+                    key={index}
+                    className={`text-sm transition-all duration-300 ${
+                      index === currentLyricsLine
+                        ? `${darkMode ? 'text-white' : 'text-black'} font-semibold text-lg`
+                        : `${darkMode ? 'text-gray-500' : 'text-gray-600'} opacity-70`
+                    }`}
+                  >
+                    {line.text || (index === currentLyricsLine ? '♪' : '')}
+                  </div>
+                ))}
+                {lyrics.lines.length === 0 && (
+                  <div className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+                    No lyrics available for this song
+                  </div>
+                )}
+                {!lyrics.hasLyrics && lyrics.source === 'fallback' && (
+                  <div className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-500'} mt-2`}>
+                    * Generated lyrics - actual lyrics not available
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Progress Bar */}
           <div className="px-4 sm:px-8 mb-6">
@@ -1201,6 +1414,60 @@ export default function Home() {
           </div>
         </header>
 
+        {/* Lyrics Panel - Toggleable overlay */}
+        {showLyrics && lyrics && !fullScreen && (
+          <div className={`fixed inset-0 z-30 ${darkMode ? 'bg-black/95' : 'bg-white/95'} backdrop-blur-sm`}>
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-800">
+                <div>
+                  <h2 className="text-xl font-bold">Lyrics</h2>
+                  <p className="text-sm opacity-70">{current?.title} - {Array.isArray(current?.artists) && current?.artists.length
+                    ? current!.artists
+                        .map((a) => (typeof a === "string" ? a : a?.name ?? ""))
+                        .filter(Boolean)
+                        .join(", ")
+                    : "Unknown Artist"}</p>
+                </div>
+                <button
+                  onClick={() => setShowLyrics(false)}
+                  className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'}`}
+                >
+                  <span className="text-xl">✕</span>
+                </button>
+              </div>
+              
+              {/* Lyrics Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="max-w-2xl mx-auto text-center space-y-4">
+                  {lyrics.lines.map((line, index) => (
+                    <div
+                      key={index}
+                      className={`text-lg transition-all duration-300 ${
+                        index === currentLyricsLine
+                          ? `${darkMode ? 'text-white' : 'text-black'} font-bold text-xl`
+                          : `${darkMode ? 'text-gray-400' : 'text-gray-600'} opacity-70`
+                      }`}
+                    >
+                      {line.text || (index === currentLyricsLine ? '♪' : '')}
+                    </div>
+                  ))}
+                  {lyrics.lines.length === 0 && (
+                    <div className={`text-lg ${darkMode ? 'text-gray-500' : 'text-gray-600'}`}>
+                      No lyrics available for this song
+                    </div>
+                  )}
+                  {!lyrics.hasLyrics && lyrics.source === 'fallback' && (
+                    <div className={`text-sm ${darkMode ? 'text-gray-600' : 'text-gray-500'} mt-8`}>
+                      * Generated lyrics - actual lyrics not available
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-20 md:pb-32">
           {/* Create Playlist Modal */}
@@ -1304,6 +1571,7 @@ export default function Home() {
                         { key: "S", action: "Toggle shuffle" },
                         { key: "R", action: "Cycle repeat mode" },
                         { key: "L", action: "Like current song" },
+                        { key: "Y", action: "Toggle lyrics display" },
                         { key: "?", action: "Show this help" },
                       ].map((shortcut, i) => (
                         <div key={i} className="flex items-center justify-between">
@@ -2014,6 +2282,12 @@ export default function Home() {
                             .join(", ")
                         : "Unknown Artist"}
                     </div>
+                    {/* Current lyrics line in mini player */}
+                    {lyrics && lyrics.lines.length > 0 && currentLyricsLine < lyrics.lines.length && lyrics.lines[currentLyricsLine]?.text && (
+                      <div className={`text-xs truncate mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                        {lyrics.lines[currentLyricsLine].text}
+                      </div>
+                    )}
                   </div>
                   <button 
                     onClick={() => current && toggleLikeSong(current)}
@@ -2110,6 +2384,14 @@ export default function Home() {
                     title={`Repeat: ${repeat === "one" ? "One" : repeat === "all" ? "All" : "Off"}`}
                   >
                     <span className="text-base">{repeat === "one" ? "🔂" : "🔁"}</span>
+                  </button>
+                  <button 
+                    onClick={() => setShowLyrics(!showLyrics)}
+                    disabled={lyricsLoading}
+                    className={`p-2 ml-1 ${showLyrics ? 'text-red-500' : darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'} hidden sm:block ${lyricsLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={lyricsLoading ? "Loading lyrics..." : showLyrics ? "Hide lyrics" : "Show lyrics"}
+                  >
+                    <span className="text-base">{lyricsLoading ? '⏳' : '🎵'}</span>
                   </button>
                   <button 
                     onClick={() => setFullScreen(true)}
