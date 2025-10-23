@@ -32,9 +32,20 @@ export async function GET(req: NextRequest) {
 
   const key = process.env.YOUTUBE_API_KEY;
   if (!key) {
+    console.warn("YouTube API key not configured, falling back to YTMusic API");
+    // Fallback to YTMusic API if YouTube API key is not available
+    try {
+      const fallbackRes = await fetch(`${req.nextUrl.origin}/api/ytmusic?q=${encodeURIComponent(q)}`);
+      if (fallbackRes.ok) {
+        return fallbackRes;
+      }
+    } catch (fallbackErr) {
+      console.error("Fallback to YTMusic API failed:", fallbackErr);
+    }
+    
     return Response.json(
-      { error: "Server not configured: please set YOUTUBE_API_KEY in .env.local" },
-      { status: 500 }
+      { error: "Search service unavailable. Please try again later." },
+      { status: 503 }
     );
   }
 
@@ -57,9 +68,31 @@ export async function GET(req: NextRequest) {
 
     if (!ytRes.ok) {
       const text = await ytRes.text();
+      console.error("YouTube API error:", ytRes.status, text);
+      
+      // Handle specific HTTP status codes
+      if (ytRes.status === 403) {
+        return Response.json(
+          { error: "YouTube API access denied. Please try again later." },
+          { status: 503 }
+        );
+      }
+      if (ytRes.status === 429) {
+        return Response.json(
+          { error: "Too many requests. Please try again later." },
+          { status: 429 }
+        );
+      }
+      if (ytRes.status === 400) {
+        return Response.json(
+          { error: "Invalid search query. Please try a different search term." },
+          { status: 400 }
+        );
+      }
+      
       return Response.json(
-        { error: "YouTube API error", status: ytRes.status, message: text },
-        { status: 502 }
+        { error: "Search service temporarily unavailable. Please try again later." },
+        { status: 503 }
       );
     }
 

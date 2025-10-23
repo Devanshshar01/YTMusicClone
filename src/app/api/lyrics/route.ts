@@ -11,28 +11,28 @@ type LyricsData = {
   source?: string;
 };
 
-// Function to parse LRC format lyrics
-function parseLRC(lrcText: string): LyricsLine[] {
-  const lines = lrcText.split('\n');
-  const lyricsLines: LyricsLine[] = [];
-  
-  for (const line of lines) {
-    const match = line.match(/^\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)$/);
-    if (match) {
-      const minutes = parseInt(match[1]);
-      const seconds = parseInt(match[2]);
-      const milliseconds = parseInt(match[3].padEnd(3, '0'));
-      const time = minutes * 60 + seconds + milliseconds / 1000;
-      const text = match[4].trim();
-      
-      if (text) {
-        lyricsLines.push({ time, text });
-      }
-    }
-  }
-  
-  return lyricsLines.sort((a, b) => a.time - b.time);
-}
+// Function to parse LRC format lyrics (currently unused but kept for future use)
+// function parseLRC(lrcText: string): LyricsLine[] {
+//   const lines = lrcText.split('\n');
+//   const lyricsLines: LyricsLine[] = [];
+//   
+//   for (const line of lines) {
+//     const match = line.match(/^\[(\d{2}):(\d{2})\.(\d{2,3})\](.*)$/);
+//     if (match) {
+//       const minutes = parseInt(match[1]);
+//       const seconds = parseInt(match[2]);
+//       const milliseconds = parseInt(match[3].padEnd(3, '0'));
+//       const time = minutes * 60 + seconds + milliseconds / 1000;
+//       const text = match[4].trim();
+//       
+//       if (text) {
+//         lyricsLines.push({ time, text });
+//       }
+//     }
+//   }
+//   
+//   return lyricsLines.sort((a, b) => a.time - b.time);
+// }
 
 // Function to generate fallback lyrics based on song title and artist
 function generateFallbackLyrics(title: string, artist: string): LyricsLine[] {
@@ -119,7 +119,7 @@ async function fetchLyrics(songTitle: string, artist: string): Promise<LyricsDat
       );
       
       if (musixmatchResponse.ok) {
-        const data = await musixmatchResponse.json();
+        // const data = await musixmatchResponse.json();
         // This would require API key setup, so we'll skip for now
       }
     } catch (e) {
@@ -140,7 +140,7 @@ async function fetchLyrics(songTitle: string, artist: string): Promise<LyricsDat
       );
       
       if (geniusResponse.ok) {
-        const data = await geniusResponse.json();
+        // const data = await geniusResponse.json();
         // This would require API key setup, so we'll skip for now
       }
     } catch (e) {
@@ -195,12 +195,16 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error('Lyrics API error:', error);
+    
+    // Return fallback lyrics instead of error
+    const fallbackLyrics = generateFallbackLyrics(cleanTitle, cleanArtist);
+    
     return Response.json({ 
-      error: "Failed to fetch lyrics",
       songId,
-      lines: generateFallbackLyrics(cleanTitle, cleanArtist),
+      lines: fallbackLyrics,
       hasLyrics: false,
-      source: 'fallback'
-    }, { status: 500 });
+      source: 'fallback',
+      error: "Unable to fetch real lyrics, showing generated lyrics instead"
+    }, { status: 200 }); // Return 200 with fallback instead of error
   }
 }
