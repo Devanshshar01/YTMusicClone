@@ -96,6 +96,29 @@ function extractViews(r: Record<string, unknown>): string | null {
   return null;
 }
 
+// Rate limiting store (in production, use Redis or similar)
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute
+  const maxRequests = 30; // 30 requests per minute
+
+  const userLimit = rateLimitStore.get(ip);
+  
+  if (!userLimit || now > userLimit.resetTime) {
+    rateLimitStore.set(ip, { count: 1, resetTime: now + windowMs });
+    return true;
+  }
+  
+  if (userLimit.count >= maxRequests) {
+    return false;
+  }
+  
+  userLimit.count++;
+  return true;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q")?.trim();
@@ -103,6 +126,12 @@ export async function GET(req: NextRequest) {
   
   if (!q && !relatedTo) {
     return Response.json({ error: "Missing query parameter 'q' or 'relatedTo'" }, { status: 400 });
+  }
+
+  // Rate limiting
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  if (!checkRateLimit(ip)) {
+    return Response.json({ error: "Rate limit exceeded. Please try again later." }, { status: 429 });
   }
 
   try {
@@ -218,7 +247,26 @@ export async function GET(req: NextRequest) {
       return Response.json({ items: filteredItems });
     }
   } catch (err: unknown) {
+    console.error("YTMusic API error:", err);
+    
+    // Handle specific error types
+    if (err instanceof Error) {
+      if (err.message.includes("rate limit") || err.message.includes("too many requests")) {
+        return Response.json({ error: "Rate limit exceeded. Please try again later." }, { status: 429 });
+      }
+      if (err.message.includes("network") || err.message.includes("timeout")) {
+        return Response.json({ error: "Network error. Please check your connection and try again." }, { status: 503 });
+      }
+      if (err.message.includes("not found") || err.message.includes("404")) {
+        return Response.json({ error: "No results found for your search." }, { status: 404 });
+      }
+    }
+    
     const message = err instanceof Error ? err.message : String(err);
-    return Response.json({ error: "ytmusic search failed", message }, { status: 500 });
+    return Response.json({ 
+      error: "Search failed", 
+      message: "Unable to search for music. Please try again later.",
+      details: process.env.NODE_ENV === "development" ? message : undefined
+    }, { status: 500 });
   }
 }
