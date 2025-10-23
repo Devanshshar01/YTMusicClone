@@ -51,6 +51,7 @@
 
 import { useMemo, useRef, useState, useEffect } from "react";
 import YouTube from "react-youtube";
+import UserMenu from "@/components/UserMenu";
 
 // A richer item type shaped by our /api/ytmusic route
 type YTMusicItem = {
@@ -1401,15 +1402,9 @@ export default function Home() {
         {/* Enhanced User profile */}
         {!sidebarCollapsed && (
           <div className="p-4 border-t border-gray-800/50">
-            <button className={`flex items-center w-full p-3 rounded-xl ${darkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-200/50'} transition-all duration-200 hover:scale-105 group`}>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center mr-3 shadow-lg group-hover:shadow-xl transition-all duration-200">
-                <span className="text-white text-lg">👤</span>
-              </div>
-              <div className="text-left">
-                <div className="font-medium">Guest User</div>
-                <div className="text-xs opacity-70">Free Plan</div>
-              </div>
-            </button>
+            <div className="flex items-center w-full">
+              <UserMenu />
+            </div>
           </div>
         )}
       </aside>
@@ -1539,9 +1534,7 @@ export default function Home() {
               >
                 <span className="text-lg">{darkMode ? "☀️" : "🌙"}</span>
               </button>
-              <button className={`p-2.5 rounded-full ${darkMode ? 'hover:bg-gray-800/70' : 'hover:bg-gray-200/70'} transition-all duration-200 hover:scale-110 active:scale-95 backdrop-blur-sm border ${darkMode ? 'border-transparent hover:border-gray-700' : 'border-transparent hover:border-gray-300'}`}>
-                <span className="text-lg">👤</span>
-              </button>
+              <UserMenu />
             </div>
           </div>
         </header>
