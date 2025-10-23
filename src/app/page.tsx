@@ -368,7 +368,7 @@ export default function Home() {
             setCurrentLyricsLine(newLineIndex);
           }
         }
-      }, 100); // Changed from 1000ms to 100ms for real-time lyrics sync
+      }, 50); // Enhanced to 50ms for ultra-smooth lyrics sync
     } else if (progressInterval.current) {
       clearInterval(progressInterval.current);
     }
@@ -620,6 +620,10 @@ export default function Home() {
       setCurrentTime(0);
       setDuration(0);
       setCurrentLyricsLine(0);
+      
+      // Show notification
+      setToast({ message: `Now playing: ${nextSong.title}`, visible: true });
+      setTimeout(() => setToast({ message: "", visible: false }), 3000);
       
       // Fetch lyrics for the new song
       const artistName = Array.isArray(nextSong.artists) && nextSong.artists.length
@@ -990,6 +994,28 @@ export default function Home() {
       return;
     }
 
+    // Check if there are songs in the queue first
+    if (queue.length > 0) {
+      const nextSong = queue[0];
+      // Remove the first song from queue and add to results
+      const newQueue = queue.slice(1);
+      setQueue(newQueue);
+      
+      // Add to results and play
+      const newResults = [...results, nextSong];
+      setResults(newResults);
+      setCurrentIndex(newResults.length - 1);
+      setIsPlaying(true);
+      setProgress(0);
+      setCurrentTime(0);
+      setDuration(0);
+      
+      // Show notification
+      setToast({ message: `Now playing: ${nextSong.title}`, visible: true });
+      setTimeout(() => setToast({ message: "", visible: false }), 3000);
+      return;
+    }
+
     // Handle repeat all or no repeat
     if (repeat === "all" || currentIndex !== null && currentIndex < results.length - 1) {
       nextTrack();
@@ -1016,6 +1042,10 @@ export default function Home() {
           setProgress(0);
           setCurrentTime(0);
           setDuration(0);
+          
+          // Show notification
+          setToast({ message: `Auto-playing: ${nextSong.title}`, visible: true });
+          setTimeout(() => setToast({ message: "", visible: false }), 3000);
         } else {
           // If no related song found, play the next song in the current list
           nextTrack();
@@ -1265,7 +1295,7 @@ export default function Home() {
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mr-3 shadow-lg">
                 <span className="text-white font-bold text-sm">▶</span>
               </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">YouTube Music</h1>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 bg-clip-text text-transparent animate-pulse">🎵 YouTube Music</h1>
             </div>
           )}
           {sidebarCollapsed && (
@@ -1465,9 +1495,9 @@ export default function Home() {
             {/* Search Bar - Always visible on mobile, only when sidebar is collapsed on desktop */}
             <div className="flex-1 max-w-2xl">
               <form onSubmit={handleSubmit} className="relative">
-                <div className={`relative rounded-full ${darkMode ? 'bg-gray-900' : 'bg-gray-100'} hover:${darkMode ? 'bg-gray-800' : 'bg-gray-200'} transition-colors`}>
+                <div className="search-container relative">
                   <input
-                    className={`w-full ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} rounded-full py-2 pl-10 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-white`}
+                    className="w-full bg-transparent text-white py-2 pl-10 pr-10 text-sm focus:outline-none placeholder-gray-400 transition-all duration-300"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => setShowSuggestions(true)}
@@ -1577,9 +1607,9 @@ export default function Home() {
                           <div
                             key={index}
                             ref={(el) => { lyricsRefs.current[index] = el; }}
-                            className={`transition-all duration-500 ease-in-out transform ${
+                            className={`lyrics-line transition-all duration-300 ease-in-out transform ${
                               index === currentLyricsLine
-                                ? `${darkMode ? 'text-white' : 'text-black'} font-bold text-xl sm:text-2xl scale-105`
+                                ? 'active text-white font-bold text-xl sm:text-2xl scale-105'
                                 : `${darkMode ? 'text-gray-400' : 'text-gray-500'} text-lg sm:text-xl opacity-60`
                             } ${
                               index === currentLyricsLine 
@@ -1813,7 +1843,7 @@ export default function Home() {
                   {queue.map((song, index) => (
                     <div
                       key={`${song.id}-${index}`}
-                      className={`flex items-center gap-4 p-3 rounded-lg ${darkMode ? 'bg-gray-900 hover:bg-gray-800' : 'bg-white hover:bg-gray-100'} transition-all group`}
+                      className={`queue-item flex items-center gap-4 ${index === 0 ? 'playing' : ''}`}
                     >
                       <div className="text-sm opacity-50 w-6 text-center">{index + 1}</div>
                       <div className="w-12 h-12 rounded overflow-hidden">
@@ -1842,13 +1872,13 @@ export default function Home() {
                       </div>
                       <button
                         onClick={() => playFromQueue(index)}
-                        className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'} opacity-0 group-hover:opacity-100 transition-all`}
+                        className="btn-primary p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
                       >
                         <span className="text-lg">▶</span>
                       </button>
                       <button
                         onClick={() => removeFromQueue(index)}
-                        className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'} opacity-0 group-hover:opacity-100 transition-all`}
+                        className="btn-primary p-2 rounded-full opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
                       >
                         <span className="text-lg">✕</span>
                       </button>
@@ -1877,7 +1907,7 @@ export default function Home() {
                 {likedSongs.map((song, index) => (
                   <div
                     key={song.id}
-                    className={`rounded-2xl p-4 ${darkMode ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 hover:from-gray-800/90 hover:to-gray-700/90' : 'bg-white/80 hover:bg-white/90'} backdrop-blur-sm border ${darkMode ? 'border-gray-700/50 hover:border-gray-600/50' : 'border-gray-200/50 hover:border-gray-300/50'} shadow-lg hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 cursor-pointer group relative overflow-hidden hover:scale-105 hover:-translate-y-2`}
+                    className="music-card cursor-pointer group relative overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                     
@@ -1977,7 +2007,7 @@ export default function Home() {
                 {recentSearches.map((item) => (
                   <div
                     key={`${item.id}-${item.timestamp}`}
-                    className={`rounded-2xl p-4 ${darkMode ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 hover:from-gray-800/90 hover:to-gray-700/90' : 'bg-white/80 hover:bg-white/90'} backdrop-blur-sm border ${darkMode ? 'border-gray-700/50 hover:border-gray-600/50' : 'border-gray-200/50 hover:border-gray-300/50'} shadow-lg hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 cursor-pointer group relative overflow-hidden hover:scale-105 hover:-translate-y-2`}
+                    className="music-card cursor-pointer group relative overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                     
@@ -2109,7 +2139,7 @@ export default function Home() {
                 {recentSearches.map((item) => (
                   <div
                     key={`${item.id}-${item.timestamp}`}
-                    className={`rounded-2xl p-4 ${darkMode ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 hover:from-gray-800/90 hover:to-gray-700/90' : 'bg-white/80 hover:bg-white/90'} backdrop-blur-sm border ${darkMode ? 'border-gray-700/50 hover:border-gray-600/50' : 'border-gray-200/50 hover:border-gray-300/50'} shadow-lg hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 cursor-pointer group relative overflow-hidden hover:scale-105 hover:-translate-y-2`}
+                    className="music-card cursor-pointer group relative overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                     
@@ -2204,7 +2234,7 @@ export default function Home() {
                 {popularSongs.slice(0, 24).map((song, index) => (
                   <div
                     key={song.id}
-                    className={`rounded-2xl p-4 ${darkMode ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 hover:from-gray-800/90 hover:to-gray-700/90' : 'bg-white/80 hover:bg-white/90'} backdrop-blur-sm border ${darkMode ? 'border-gray-700/50 hover:border-gray-600/50' : 'border-gray-200/50 hover:border-gray-300/50'} shadow-lg hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 cursor-pointer group relative overflow-hidden hover:scale-105 hover:-translate-y-2`}
+                    className="music-card cursor-pointer group relative overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                     
@@ -2355,7 +2385,7 @@ export default function Home() {
                   {filteredResults.map((r, idx) => (
                     <div
                       key={r.id}
-                      className={`rounded-2xl p-4 ${darkMode ? 'bg-gradient-to-br from-gray-900/80 to-gray-800/80 hover:from-gray-800/90 hover:to-gray-700/90' : 'bg-white/80 hover:bg-white/90'} backdrop-blur-sm border ${darkMode ? 'border-gray-700/50 hover:border-gray-600/50' : 'border-gray-200/50 hover:border-gray-300/50'} shadow-lg hover:shadow-2xl hover:shadow-red-500/10 transition-all duration-500 cursor-pointer group relative overflow-hidden hover:scale-105 hover:-translate-y-2`}
+                      className="music-card cursor-pointer group relative overflow-hidden"
                     >
                       {/* Gradient overlay on hover */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
@@ -2436,14 +2466,14 @@ export default function Home() {
 
         {/* Enhanced Bottom Player - YouTube Music Style */}
         {current && !fullScreen && (
-          <footer className="fixed bottom-0 left-0 right-0 z-20 backdrop-blur-lg">
+          <footer className="now-playing fixed bottom-0 left-0 right-0 z-20 backdrop-blur-lg">
             {/* Enhanced Progress bar */}
             <div 
-              className={`h-2 w-full ${darkMode ? 'bg-gray-800/50' : 'bg-gray-300/50'} cursor-pointer hover:h-3 transition-all duration-200`}
+              className="progress-container h-2 w-full cursor-pointer hover:h-3 transition-all duration-200"
               onClick={handleProgressClick}
             >
               <div 
-                className="h-full bg-gradient-to-r from-red-500 via-red-600 to-red-500 relative shadow-lg" 
+                className="progress-bar h-full relative shadow-lg" 
                 style={{ width: `${progress}%` }}
               >
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-xl opacity-0 hover:opacity-100 transition-all duration-200 hover:scale-125"></div>
@@ -2546,11 +2576,11 @@ export default function Home() {
                   <div className="flex items-center w-full mt-2">
                     <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-600'} mr-2`}>{formatTime(currentTime)}</span>
                     <div 
-                      className="flex-1 h-1 bg-gray-700 rounded-full cursor-pointer"
+                      className="progress-container cursor-pointer"
                       onClick={handleProgressClick}
                     >
                       <div 
-                        className="h-full bg-red-600 rounded-full" 
+                        className="progress-bar" 
                         style={{ width: `${progress}%` }}
                       ></div>
                     </div>
