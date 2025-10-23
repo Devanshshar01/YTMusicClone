@@ -97,3 +97,13 @@ temp/
 .idea/
 *.swp
 *.swo
+/src/generated/prisma
+
+# SQLite database files (local development only)
+*.db
+*.db-journal
+dev.db
+dev.db-journal
+
+# Prisma migrations (optional - include if you want version control)
+# /prisma/migrations/
