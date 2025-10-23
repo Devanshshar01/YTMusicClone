@@ -5,8 +5,17 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "YouTube Music Clone",
-  description: "A YouTube Music clone built with Next.js",
+  title: "YT Music - Stream Your Favorite Songs",
+  description: "A beautiful, modern YouTube Music clone with an enhanced UI/UX. Discover, play, and enjoy your favorite music with advanced features like playlists, queue management, and more.",
+  keywords: ["music", "youtube music", "streaming", "songs", "playlists", "audio player"],
+  authors: [{ name: "YT Music" }],
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#ef4444",
 };
 
 export default function RootLayout({

@@ -1032,10 +1032,10 @@ export default function Home() {
   }
 
   return (
-    <div className={`flex h-screen ${darkMode ? 'bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'} smooth-scroll`}>
-      {/* Full Screen Now Playing View */}
+    <div className={`flex h-screen ${darkMode ? 'bg-gradient-to-br from-gray-950 via-black to-gray-950 text-white' : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900'} smooth-scroll overflow-hidden`}>
+      {/* Full Screen Now Playing View - Enhanced */}
       {fullScreen && current && (
-        <div className={`fixed inset-0 z-50 ${darkMode ? 'bg-gradient-to-br from-gray-900 via-black to-gray-900' : 'bg-gradient-to-br from-white via-gray-50 to-white'} flex flex-col`}>
+        <div className={`fixed inset-0 z-50 ${darkMode ? 'bg-gradient-to-br from-gray-950 via-black to-gray-950' : 'bg-gradient-to-br from-white via-gray-50 to-white'} flex flex-col backdrop-blur-3xl`}>
           {/* Header */}
           <div className="flex items-center justify-between p-4 sm:p-6">
             <button 
@@ -1053,7 +1053,7 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Album Art */}
+          {/* Album Art - Enhanced with better effects */}
           <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-8">
             <div className="relative w-full max-w-md aspect-square">
               {currentThumb ? (
@@ -1062,17 +1062,24 @@ export default function Home() {
                   <img 
                     src={currentThumb} 
                     alt={current?.title || "Now Playing"} 
-                    className={`w-full h-full rounded-2xl shadow-2xl object-cover ${isPlaying ? 'animate-[spin_20s_linear_infinite]' : ''}`}
+                    className={`w-full h-full rounded-3xl shadow-2xl object-cover ${isPlaying ? 'animate-[spin_20s_linear_infinite]' : ''} border-4 ${darkMode ? 'border-gray-800/50' : 'border-white/50'}`}
                     style={{ animationPlayState: isPlaying ? 'running' : 'paused' }}
                   />
-                  {/* Glow effect */}
+                  {/* Enhanced Glow effect with multiple layers */}
                   <div 
-                    className="absolute inset-0 rounded-2xl blur-3xl opacity-30 -z-10"
+                    className="absolute inset-0 rounded-3xl blur-3xl opacity-40 -z-10 animate-pulse"
                     style={{ 
                       backgroundImage: `url(${currentThumb})`,
                       backgroundSize: 'cover',
-                      filter: 'blur(60px)',
-                      transform: 'scale(1.1)'
+                      filter: 'blur(80px) saturate(150%)',
+                      transform: 'scale(1.2)'
+                    }}
+                  />
+                  <div 
+                    className="absolute inset-0 rounded-3xl blur-2xl opacity-20 -z-10"
+                    style={{ 
+                      background: 'radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%)',
+                      transform: 'scale(1.3)'
                     }}
                   />
                 </div>
@@ -1257,20 +1264,20 @@ export default function Home() {
       )}
 
       {/* Enhanced Sidebar with Grid Layout */}
-      <aside className={`${sidebarCollapsed ? 'w-16 md:w-64' : 'w-64'} ${darkMode ? 'bg-gradient-to-b from-gray-900 to-black border-gray-800' : 'bg-gradient-to-b from-white to-gray-50 border-gray-200'} border-r flex flex-col transition-all duration-300 hidden md:flex shadow-xl`}>
-        {/* Enhanced Logo and collapse button */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-800/50">
+      <aside className={`${sidebarCollapsed ? 'w-16 md:w-64' : 'w-64'} ${darkMode ? 'bg-gradient-to-b from-gray-950 via-gray-900 to-black border-gray-800/50' : 'bg-gradient-to-b from-white via-gray-50 to-gray-100 border-gray-200/50'} border-r flex flex-col transition-all duration-300 hidden md:flex shadow-2xl backdrop-blur-sm`}>
+        {/* Enhanced Logo and collapse button with better design */}
+        <div className={`flex items-center justify-between p-4 border-b ${darkMode ? 'border-gray-800/30' : 'border-gray-200/30'}`}>
           {!sidebarCollapsed && (
             <div className="flex items-center">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center mr-3 shadow-lg">
-                <span className="text-white font-bold text-sm">▶</span>
+              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-pink-600 flex items-center justify-center mr-3 shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/40 transition-all duration-300 hover:scale-105">
+                <span className="text-white font-bold text-lg">▶</span>
               </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">YouTube Music</h1>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 bg-clip-text text-transparent drop-shadow-lg">YT Music</h1>
             </div>
           )}
           {sidebarCollapsed && (
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-sm">▶</span>
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-red-500 via-red-600 to-pink-600 flex items-center justify-center shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/40 transition-all duration-300 hover:scale-105">
+              <span className="text-white font-bold text-lg">▶</span>
             </div>
           )}
           <button 
@@ -1310,14 +1317,14 @@ export default function Home() {
               return (
               <button
                 key={key}
-                className={`flex items-center w-full px-4 py-3 text-sm font-medium transition-all duration-200 relative rounded-xl group ${
+                className={`flex items-center w-full px-4 py-3 text-sm font-medium transition-all duration-300 relative rounded-2xl group ${
                   currentView === view
-                    ? `${darkMode ? 'text-white bg-gradient-to-r from-red-500/20 to-pink-500/20 border border-red-500/30' : 'text-black bg-gradient-to-r from-red-100 to-pink-100 border border-red-200'} font-semibold shadow-lg` 
-                    : `${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'} hover:scale-105`
+                    ? `${darkMode ? 'text-white bg-gradient-to-r from-red-500/25 to-pink-500/25 border border-red-500/40 shadow-lg shadow-red-500/20' : 'text-black bg-gradient-to-r from-red-100 to-pink-100 border border-red-300 shadow-lg shadow-red-200/30'} font-semibold` 
+                    : `${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800/60 border border-transparent' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60 border border-transparent'} hover:scale-105 hover:shadow-md`
                 }`}
                 onClick={() => setCurrentView(view as typeof currentView)}
               >
-                <span className={`text-lg mr-4 transition-transform duration-200 ${currentView === view ? 'scale-110' : 'group-hover:scale-110'}`}>{icon}</span>
+                <span className={`text-lg mr-4 transition-all duration-300 ${currentView === view ? 'scale-110' : 'group-hover:scale-125 group-hover:rotate-6'}`}>{icon}</span>
                 {!sidebarCollapsed && (
                   <span className="flex-1 text-left">{label}</span>
                 )}
@@ -1407,9 +1414,9 @@ export default function Home() {
         )}
       </aside>
 
-      {/* Enhanced Mobile Navigation with Grid Layout */}
+      {/* Enhanced Mobile Navigation with modern design */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-20">
-        <div className={`grid grid-cols-3 items-center py-3 px-4 ${darkMode ? 'bg-gradient-to-t from-black to-gray-900 border-t border-gray-800/50' : 'bg-gradient-to-t from-white to-gray-50 border-t border-gray-200/50'} backdrop-blur-lg shadow-2xl`}>
+        <div className={`grid grid-cols-3 items-center py-3 px-4 ${darkMode ? 'bg-gradient-to-t from-black via-gray-950 to-gray-900/95 border-t border-gray-800/30' : 'bg-gradient-to-t from-white via-gray-50 to-gray-100/95 border-t border-gray-200/30'} backdrop-blur-2xl shadow-2xl`}>
           {([
             { key: "home", icon: "🏠", label: "Home" },
             { key: "explore", icon: "🔍", label: "Search" },
@@ -1424,13 +1431,13 @@ export default function Home() {
                   setCurrentView("home");
                 }
               }}
-              className={`flex flex-col items-center p-2 rounded-xl transition-all duration-200 ${
+              className={`flex flex-col items-center p-3 rounded-2xl transition-all duration-300 active:scale-95 ${
                 key === "home" && currentView === "home" || key === "library" && currentView !== "home" 
-                  ? `${darkMode ? 'text-white bg-red-500/20' : 'text-black bg-red-100'} scale-105` 
-                  : `${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800/50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/50'} hover:scale-105`
+                  ? `${darkMode ? 'text-white bg-gradient-to-t from-red-500/30 to-pink-500/30 shadow-lg shadow-red-500/20' : 'text-black bg-gradient-to-t from-red-100 to-pink-100 shadow-lg shadow-red-200/30'} scale-105` 
+                  : `${darkMode ? 'text-gray-400 hover:text-white hover:bg-gray-800/60' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'} hover:scale-105`
               }`}
             >
-              <span className="text-xl mb-1">{icon}</span>
+              <span className={`text-2xl mb-1 transition-transform duration-300 ${key === "home" && currentView === "home" || key === "library" && currentView !== "home" ? 'scale-110' : ''}`}>{icon}</span>
               <span className="text-xs font-medium">{label}</span>
             </button>
           ))}
@@ -1439,9 +1446,9 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Bar */}
-        <header className={`sticky top-0 z-10 ${darkMode ? 'bg-black' : 'bg-white'} border-b ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-          <div className="flex items-center px-4 py-3">
+        {/* Top Bar - Enhanced with glassmorphism and better spacing */}
+        <header className={`sticky top-0 z-10 ${darkMode ? 'bg-black/80' : 'bg-white/80'} backdrop-blur-xl border-b ${darkMode ? 'border-gray-800/50' : 'border-gray-200/50'} shadow-sm`}>
+          <div className="flex items-center px-4 py-4">
             {/* Back button - only visible when not on home view */}
             {currentView !== "home" && (
               <button 
@@ -1462,12 +1469,12 @@ export default function Home() {
               </button>
             )}
             
-            {/* Search Bar - Always visible on mobile, only when sidebar is collapsed on desktop */}
+            {/* Search Bar - Enhanced with modern styling */}
             <div className="flex-1 max-w-2xl">
               <form onSubmit={handleSubmit} className="relative">
-                <div className={`relative rounded-full ${darkMode ? 'bg-gray-900' : 'bg-gray-100'} hover:${darkMode ? 'bg-gray-800' : 'bg-gray-200'} transition-colors`}>
+                <div className={`relative rounded-full ${darkMode ? 'bg-gray-900/60' : 'bg-gray-100/60'} hover:${darkMode ? 'bg-gray-800/80' : 'bg-gray-200/80'} transition-all duration-300 backdrop-blur-sm border ${darkMode ? 'border-gray-700/30' : 'border-gray-300/30'} hover:border-red-500/50`}>
                   <input
-                    className={`w-full ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'} rounded-full py-2 pl-10 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-white`}
+                    className={`w-full ${darkMode ? 'bg-transparent text-white placeholder-gray-400' : 'bg-transparent text-gray-900 placeholder-gray-500'} rounded-full py-2.5 pl-11 pr-10 text-sm focus:outline-none focus:ring-2 ${darkMode ? 'focus:ring-red-500/50' : 'focus:ring-red-400/50'} transition-all`}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => setShowSuggestions(true)}
@@ -1491,9 +1498,9 @@ export default function Home() {
                   )}
                 </div>
                 
-                {/* Search Suggestions */}
+                {/* Search Suggestions - Enhanced with modern styling */}
                 {showSuggestions && searchSuggestions.length > 0 && (
-                  <div className={`absolute top-full left-0 right-0 mt-2 ${darkMode ? 'bg-gray-900' : 'bg-white'} rounded-lg shadow-2xl overflow-hidden z-50 border ${darkMode ? 'border-gray-800' : 'border-gray-200'}`}>
+                  <div className={`absolute top-full left-0 right-0 mt-2 ${darkMode ? 'bg-gray-900/95' : 'bg-white/95'} backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden z-50 border ${darkMode ? 'border-gray-700/50' : 'border-gray-300/50'} slide-in-bottom`}>
                     {searchSuggestions.map((suggestion, index) => (
                       <button
                         key={index}
@@ -1503,10 +1510,11 @@ export default function Home() {
                           search(suggestion);
                           setShowSuggestions(false);
                         }}
-                        className={`w-full text-left px-4 py-3 text-sm ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} transition-colors flex items-center gap-3`}
+                        className={`w-full text-left px-5 py-3.5 text-sm ${darkMode ? 'hover:bg-gray-800/70' : 'hover:bg-gray-100/70'} transition-all duration-200 flex items-center gap-3 ${index === 0 ? 'rounded-t-2xl' : ''} ${index === searchSuggestions.length - 1 ? 'rounded-b-2xl' : ''} hover:translate-x-1`}
                       >
-                        <span className="text-gray-400">🔍</span>
-                        <span>{suggestion}</span>
+                        <span className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>🔍</span>
+                        <span className="flex-1">{suggestion}</span>
+                        <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'} opacity-0 group-hover:opacity-100 transition-opacity`}>↵</span>
                       </button>
                     ))}
                   </div>
@@ -1514,11 +1522,11 @@ export default function Home() {
               </form>
             </div>
             
-            {/* User Actions */}
-            <div className="flex items-center ml-4">
+            {/* User Actions - Enhanced with better hover effects */}
+            <div className="flex items-center gap-2 ml-4">
               <button 
                 onClick={() => setShowKeyboardShortcuts(true)}
-                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'} transition-colors hidden sm:block`}
+                className={`p-2.5 rounded-full ${darkMode ? 'hover:bg-gray-800/70' : 'hover:bg-gray-200/70'} transition-all duration-200 hover:scale-110 active:scale-95 backdrop-blur-sm border ${darkMode ? 'border-transparent hover:border-gray-700' : 'border-transparent hover:border-gray-300'} hidden sm:block`}
                 aria-label="Keyboard shortcuts"
                 title="Keyboard shortcuts (?)"
               >
@@ -1526,12 +1534,12 @@ export default function Home() {
               </button>
               <button 
                 onClick={toggleTheme}
-                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'} transition-colors ml-1`}
+                className={`p-2.5 rounded-full ${darkMode ? 'hover:bg-gray-800/70' : 'hover:bg-gray-200/70'} transition-all duration-200 hover:scale-110 active:scale-95 backdrop-blur-sm border ${darkMode ? 'border-transparent hover:border-gray-700' : 'border-transparent hover:border-gray-300'}`}
                 aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
               >
                 <span className="text-lg">{darkMode ? "☀️" : "🌙"}</span>
               </button>
-              <button className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-200'} transition-colors ml-1`}>
+              <button className={`p-2.5 rounded-full ${darkMode ? 'hover:bg-gray-800/70' : 'hover:bg-gray-200/70'} transition-all duration-200 hover:scale-110 active:scale-95 backdrop-blur-sm border ${darkMode ? 'border-transparent hover:border-gray-700' : 'border-transparent hover:border-gray-300'}`}>
                 <span className="text-lg">👤</span>
               </button>
             </div>
@@ -2644,10 +2652,11 @@ export default function Home() {
           )}
         </div>
 
-        {/* Toast Notification */}
+        {/* Toast Notification - Enhanced with modern design */}
         {toast.visible && (
-          <div className={`fixed bottom-24 right-4 sm:right-6 z-50 ${darkMode ? 'bg-gray-900' : 'bg-gray-800'} text-white px-4 py-3 rounded-lg shadow-2xl slide-in-right flex items-center gap-2 max-w-xs`}>
-            <span className="text-sm">{toast.message}</span>
+          <div className={`fixed bottom-24 right-4 sm:right-6 z-50 ${darkMode ? 'bg-gray-900/95' : 'bg-gray-800/95'} backdrop-blur-xl text-white px-5 py-3.5 rounded-2xl shadow-2xl slide-in-right flex items-center gap-3 max-w-xs border ${darkMode ? 'border-gray-700/50' : 'border-gray-600/50'}`}>
+            <span className="text-lg">✓</span>
+            <span className="text-sm font-medium">{toast.message}</span>
           </div>
         )}
 
