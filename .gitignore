@@ -107,3 +107,4 @@ dev.db-journal
 
 # Prisma migrations (optional - include if you want version control)
 # /prisma/migrations/
+.env
