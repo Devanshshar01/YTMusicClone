@@ -1,11 +1,9 @@
 import type { AuthOptions } from "next-auth/core/types";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { prisma } from "./prisma";
+import { supabase } from "./supabase";
 import bcrypt from "bcryptjs";
 
 export const authOptions: AuthOptions = {
-  adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -18,13 +16,13 @@ export const authOptions: AuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email: credentials.email
-          }
-        });
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', credentials.email)
+          .maybeSingle();
 
-        if (!user || !user.password) {
+        if (error || !user || !user.password) {
           throw new Error("Invalid credentials");
         }
 
