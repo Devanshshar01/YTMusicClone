@@ -819,32 +819,6 @@ export default function Home() {
     showToast(`Playlist "${name}" created!`);
   }
 
-  // Add song to playlist
-  function _addSongToPlaylist(playlistId: string, song: YTMusicItem) {
-    setPlaylists(prev => prev.map(p => 
-      p.id === playlistId 
-        ? { ...p, songs: [...p.songs, song] }
-        : p
-    ));
-  }
-
-  // Remove song from playlist
-  function _removeSongFromPlaylist(playlistId: string, songId: string) {
-    setPlaylists(prev => prev.map(p => 
-      p.id === playlistId 
-        ? { ...p, songs: p.songs.filter(s => s.id !== songId) }
-        : p
-    ));
-  }
-
-  // Delete playlist
-  function _deletePlaylist(playlistId: string) {
-    const playlist = playlists.find(p => p.id === playlistId);
-    setPlaylists(prev => prev.filter(p => p.id !== playlistId));
-    if (playlist) {
-      showToast(`Playlist "${playlist.name}" deleted`);
-    }
-  }
 
   // Share song
   function shareSong(song: YTMusicItem) {
