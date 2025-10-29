@@ -22,7 +22,12 @@ export const authOptions: AuthOptions = {
           .eq('email', credentials.email)
           .maybeSingle();
 
-        if (error || !user || !user.password) {
+        if (error) {
+          console.error("Database error during authentication:", error);
+          throw new Error("Authentication failed. Please try again.");
+        }
+
+        if (!user || !user.password) {
           throw new Error("Invalid credentials");
         }
 

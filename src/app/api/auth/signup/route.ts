@@ -4,7 +4,8 @@ import bcrypt from "bcryptjs";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password } = await req.json();
+    const body = await req.json();
+    const { name, email, password } = body;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -13,11 +14,26 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: existingUser } = await supabase
+    if (password.length < 8) {
+      return NextResponse.json(
+        { error: "Password must be at least 8 characters" },
+        { status: 400 }
+      );
+    }
+
+    const { data: existingUser, error: checkError } = await supabase
       .from('users')
       .select('id')
       .eq('email', email)
       .maybeSingle();
+
+    if (checkError) {
+      console.error("Error checking existing user:", checkError);
+      return NextResponse.json(
+        { error: "Failed to verify user" },
+        { status: 500 }
+      );
+    }
 
     if (existingUser) {
       return NextResponse.json(
@@ -42,9 +58,9 @@ export async function POST(req: Request) {
       .single();
 
     if (error) {
-      console.error("Supabase error:", error);
+      console.error("Error creating user:", error);
       return NextResponse.json(
-        { error: "Failed to create user" },
+        { error: error.message || "Failed to create user" },
         { status: 500 }
       );
     }
@@ -61,9 +77,10 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Signup error:", error);
+    console.error("Unexpected signup error:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
     return NextResponse.json(
-      { error: "Something went wrong" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
