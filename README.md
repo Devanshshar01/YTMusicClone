@@ -37,18 +37,18 @@
 
 ## 🌟 Overview
 
-YouTube Music Clone is a modern, full-featured music streaming application that replicates the core functionality of YouTube Music [5]. Built with cutting-edge web technologies, it delivers a seamless listening experience across all devices with an intuitive interface and powerful playback controls [5].
+YouTube Music Clone is a modern, full-featured music streaming application that replicates the core functionality of YouTube Music . Built with cutting-edge web technologies, it delivers a seamless listening experience across all devices with an intuitive interface and powerful playback controls.
 
 ### Why This Project?
 
-This project demonstrates advanced React patterns, TypeScript implementation, state management, and API integration while providing a production-ready music streaming platform [5]. It showcases modern web development practices including responsive design, accessibility features, and performance optimization [2][3].
+This project demonstrates advanced React patterns, TypeScript implementation, state management, and API integration while providing a production-ready music streaming platform. It showcases modern web development practices including responsive design, accessibility features, and performance optimization.
 
 ### Key Highlights
 
-- **Modern Architecture**: Built on Next.js 15.5.4 with React 19.1.0 and TypeScript for type safety [5]
-- **Rich User Experience**: Smooth animations, gesture controls, and keyboard shortcuts [5]
+- **Modern Architecture**: Built on Next.js 15.5.4 with React 19.1.0 and TypeScript for type safety.
+- **Rich User Experience**: Smooth animations, gesture controls, and keyboard shortcuts.
 - **Production Ready**: Deployed on Vercel with full functionality and optimized performance [5]
-- **Mobile First**: Responsive design with touch-optimized controls and swipe gestures [5]
+- **Mobile First**: Responsive design with touch-optimized controls and swipe gestures.
 
 ***
 
@@ -56,11 +56,11 @@ This project demonstrates advanced React patterns, TypeScript implementation, st
 
 ### 🎨 User Interface
 
-- **Modern Gradient Design** - Beautiful gradient backgrounds with glass morphism effects [5]
-- **Dark/Light Mode** - Seamless theme switching with localStorage persistence [5]
-- **Smooth Animations** - Hover effects, transitions, and micro-interactions throughout [5]
+- **Modern Gradient Design** - Beautiful gradient backgrounds with glass morphism effects
+- **Dark/Light Mode** - Seamless theme switching with localStorage persistence
+- **Smooth Animations** - Hover effects, transitions, and micro-interactions throughout
 - **Responsive Layout** - Optimized for desktop (>1024px), tablet (768-1024px), and mobile (<768px) [5]
-- **Interactive Cards** - Album art with scale effects and overlay interactions [5]
+- **Interactive Cards** - Album art with scale effects and overlay interactions
 
 ### 🎵 Music Playback
 
@@ -364,9 +364,7 @@ For choosing an appropriate license for your projects, visit [choosealicense.com
 
 ### Contributors
 
-- **[Devanshshar01](https://github.com/Devanshshar01)** - Lead Developer [5]
-- **Cursor Agent** - Development Assistant [5]
-
+- **[Devanshshar01](https://github.com/Devanshshar01)** - Lead Developer
 ### Technologies & Resources
 
 - [Next.js Documentation](https://nextjs.org/docs) - Framework reference
@@ -401,15 +399,3 @@ Made with ❤️ by Devanshshar01
 
 </div>
 
-Citations:
-[1] Best practices for GitHub Docs https://docs.github.com/en/contributing/writing-for-github-docs/best-practices-for-github-docs
-[2] How to Write a Good README File for Your GitHub Project https://www.freecodecamp.org/news/how-to-write-a-good-readme-file/
-[3] Professional README Guide | The Full-Stack Blog https://coding-boot-camp.github.io/full-stack/github/professional-readme-guide/
-[4] A standard style for README files https://github.com/RichardLitt/standard-readme
-[5] GitHub - Devanshshar01/YTMusicClone https://github.com/Devanshshar01/YTMusicClone
-[6] Basic writing and formatting syntax https://docs.github.com/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax
-[7] About the repository README file https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes
-[8] Build a documentation site with Next.js using Nextra https://dev.to/mayorstacks/build-a-documentation-site-with-nextjs-2b3p
-[9] How to write a good README for your GitHub project? https://bulldogjob.com/readme/how-to-write-a-good-readme-for-your-github-project
-[10] Next.js Documentation Website Templates https://nextjstemplates.com/docs-template
-[11] The Essential README File: Elevating Your Project with a ... https://cubettech.com/resources/blog/the-essential-readme-file-elevating-your-project-with-a-comprehensive-document/
