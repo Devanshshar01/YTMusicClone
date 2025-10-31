@@ -1,9 +1,8 @@
-import type { AuthOptions } from "next-auth/core/types";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { supabase } from "./supabase";
-import bcrypt from "bcryptjs";
+import { supabaseServer } from "./supabaseServer";
 
-export const authOptions: AuthOptions = {
+// Using any to avoid type import issues with next-auth v4
+export const authOptions: any = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -16,41 +15,45 @@ export const authOptions: AuthOptions = {
           throw new Error("Invalid credentials");
         }
 
-        const { data: user, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', credentials.email)
-          .maybeSingle();
+        try {
+          // Authenticate with Supabase Auth
+          const { data, error } = await supabaseServer.auth.signInWithPassword({
+            email: credentials.email,
+            password: credentials.password,
+          });
 
-        if (error) {
-          console.error("Database error during authentication:", error);
+          if (error || !data.user) {
+            console.error("Supabase auth error:", error);
+            throw new Error("Invalid credentials");
+          }
+
+          // Fetch additional user data from custom users table
+          const { data: userProfile, error: profileError } = await supabaseServer
+            .from('users')
+            .select('name, image')
+            .eq('id', data.user.id)
+            .maybeSingle();
+
+          if (profileError) {
+            console.error("Error fetching user profile:", profileError);
+          }
+
+          return {
+            id: data.user.id,
+            email: data.user.email!,
+            name: userProfile?.name || data.user.user_metadata?.name || null,
+            image: userProfile?.image || null,
+          };
+        } catch (error) {
+          console.error("Authentication error:", error);
           throw new Error("Authentication failed. Please try again.");
         }
-
-        if (!user || !user.password) {
-          throw new Error("Invalid credentials");
-        }
-
-        const isPasswordValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          throw new Error("Invalid credentials");
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: user.image,
-        };
       }
     })
   ],
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: "/login",
@@ -61,12 +64,18 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.picture = user.image;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string | null;
+        session.user.image = token.picture as string | null;
       }
       return session;
     },

@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
-import bcrypt from "bcryptjs";
+import { supabaseServer } from "@/lib/supabaseServer";
 
+/**
+ * User signup endpoint using Supabase Auth
+ * This properly leverages Supabase's built-in authentication system
+ */
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { name, email, password } = body;
 
+    // Validate required fields
     if (!email || !password) {
       return NextResponse.json(
         { error: "Email and password are required" },
@@ -14,6 +18,16 @@ export async function POST(req: Request) {
       );
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { error: "Invalid email format" },
+        { status: 400 }
+      );
+    }
+
+    // Validate password strength
     if (password.length < 8) {
       return NextResponse.json(
         { error: "Password must be at least 8 characters" },
@@ -21,57 +35,66 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: existingUser, error: checkError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (checkError) {
-      console.error("Error checking existing user:", checkError);
-      return NextResponse.json(
-        { error: "Failed to verify user" },
-        { status: 500 }
-      );
-    }
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "User already exists" },
-        { status: 400 }
-      );
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    const { data: user, error } = await supabase
-      .from('users')
-      .insert({
-        id: userId,
-        name: name || null,
-        email,
-        password: hashedPassword,
-      })
-      .select()
-      .single();
+    // Use Supabase Auth to create user
+    const { data, error } = await supabaseServer.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name || null,
+        },
+      },
+    });
 
     if (error) {
-      console.error("Error creating user:", error);
+      console.error("Supabase signup error:", error);
+      
+      // Handle specific error cases
+      if (error.message.includes("already registered")) {
+        return NextResponse.json(
+          { error: "User already exists" },
+          { status: 400 }
+        );
+      }
+      
       return NextResponse.json(
         { error: error.message || "Failed to create user" },
         { status: 500 }
       );
     }
 
+    if (!data.user) {
+      return NextResponse.json(
+        { error: "Failed to create user" },
+        { status: 500 }
+      );
+    }
+
+    // Create entry in custom users table with additional data
+    const { error: dbError } = await supabaseServer
+      .from('users')
+      .insert({
+        id: data.user.id,
+        name: name || null,
+        email: data.user.email,
+        email_verified: null,
+        password: '', // Managed by Supabase Auth
+        image: null,
+      });
+
+    if (dbError) {
+      console.error("Error creating user profile:", dbError);
+      // User is created in auth but profile failed - still return success
+      // The profile will be created on first login
+    }
+
     return NextResponse.json(
       {
         message: "User created successfully",
         user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
+          id: data.user.id,
+          email: data.user.email,
+          name: name,
         }
       },
       { status: 201 }

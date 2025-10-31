@@ -57,14 +57,23 @@ export function generateFallbackLyrics(title: string, artist: string): LyricsLin
 
 export async function fetchLyrics(songTitle: string, artist: string): Promise<LyricsData> {
   try {
+    // Create AbortController for better compatibility across environments
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     try {
       const lyricsResponse = await fetch(
         `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(songTitle)}`,
         {
-          headers: { 'User-Agent': 'YouTube-Music-Clone/1.0' },
-          signal: AbortSignal.timeout(8000)
+          headers: { 
+            'User-Agent': 'YouTube-Music-Clone/1.0',
+            'Accept': 'application/json'
+          },
+          signal: controller.signal
         }
       );
+
+      clearTimeout(timeoutId);
 
       if (lyricsResponse.ok) {
         const data = await lyricsResponse.json();
@@ -83,11 +92,20 @@ export async function fetchLyrics(songTitle: string, artist: string): Promise<Ly
             };
           }
         }
+      } else {
+        console.log(`Lyrics API returned ${lyricsResponse.status}: ${lyricsResponse.statusText}`);
       }
     } catch (e) {
-      console.log('Lyrics.ovh failed:', e);
+      clearTimeout(timeoutId);
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      if (errorMessage.includes('aborted')) {
+        console.log('Lyrics fetch timeout after 8 seconds');
+      } else {
+        console.log('Lyrics.ovh failed:', errorMessage);
+      }
     }
 
+    // Return fallback lyrics if API fails
     return {
       lines: generateFallbackLyrics(songTitle, artist),
       hasLyrics: false,

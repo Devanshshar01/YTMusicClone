@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --background: #fafafa;
@@ -637,4 +639,26 @@ input:focus, button:focus, select:focus, textarea:focus {
   );
   background-size: 200% 200%;
   animation: gradientShift 3s ease infinite;
+}
+
+/* Slide up animation for toast */
+@keyframes slideUp {
+  from {
+    transform: translate(-50%, 20px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
