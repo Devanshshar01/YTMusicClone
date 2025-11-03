@@ -1,8 +1,7 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import { supabaseServer } from "./supabaseServer";
 
-// Using any to avoid type import issues with next-auth v4
-export const authOptions: any = {
+export const authOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
@@ -54,7 +53,7 @@ export const authOptions: any = {
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
+  } as const,
   pages: {
     signIn: "/login",
     signOut: "/",
