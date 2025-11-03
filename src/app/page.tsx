@@ -85,6 +85,14 @@ type LyricsData = {
   source?: string;
 };
 
+type SongSuggestion = {
+  id: string;
+  title: string;
+  artist: string;
+  thumbnail: string;
+  duration: string;
+};
+
 // Minimal player type to avoid 'any'
 type YTLikePlayer = {
   playVideo?: () => void;
@@ -144,8 +152,11 @@ export default function Home() {
   const [playlists, setPlaylists] = useState<{id: string, name: string, songs: YTMusicItem[]}[]>([]);
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
-  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
+  const [searchSuggestions, setSearchSuggestions] = useState<SongSuggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
   const [toast, setToast] = useState<{message: string, visible: boolean}>({message: "", visible: false});
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
@@ -395,47 +406,48 @@ export default function Home() {
     }
   }, [currentLyricsLine, lyrics]);
 
+  async function fetchSongSuggestions(q: string) {
+    const cached = localStorage.getItem(`suggestions:${q}`);
+    if (cached) {
+      setSearchSuggestions(JSON.parse(cached));
+      return;
+    }
+
+    setSuggestionsLoading(true);
+    setSuggestionsError(null);
+    try {
+      const res = await fetch(`/api/ytmusic?q=${encodeURIComponent(q)}&maxResults=8`);
+      if (res.ok) {
+        const data = await res.json();
+        const suggestions: SongSuggestion[] = (data.items || []).map((item: any) => ({
+          id: item.id,
+          title: item.title,
+          artist: item.artists?.map((a: any) => a.name).join(', ') || 'Unknown Artist',
+          thumbnail: computeThumb(item.id),
+          duration: item.duration || '0:00',
+        }));
+        setSearchSuggestions(suggestions);
+        localStorage.setItem(`suggestions:${q}`, JSON.stringify(suggestions));
+      } else {
+        setSuggestionsError("Failed to fetch suggestions.");
+      }
+    } catch (e) {
+      console.error("Failed to fetch suggestions", e);
+      setSuggestionsError("An error occurred while fetching suggestions.");
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  }
+
   // Search suggestions based on query input
   useEffect(() => {
     const debounceTimer = setTimeout(() => {
-      if (query.trim().length >= 2) {
-        // Generate suggestions from recent searches and popular terms
-        const suggestions: string[] = [];
-        
-        // Add matching recent searches
-        const recentMatches = recentSearches
-          .filter(item => 
-            item.title.toLowerCase().includes(query.toLowerCase()) ||
-            (Array.isArray(item.artists) && item.artists.some(artist => {
-              const artistName = typeof artist === 'string' ? artist : artist?.name || '';
-              return artistName.toLowerCase().includes(query.toLowerCase());
-            }))
-          )
-          .map(item => item.title)
-          .slice(0, 3);
-        
-        suggestions.push(...recentMatches);
-        
-        // Add popular search terms that match
-        const popularTerms = [
-          'top hits 2024', 'trending music', 'latest songs',
-          'rock music', 'pop hits', 'hip hop', 'electronic music',
-          'classical music', 'jazz', 'country music'
-        ];
-        
-        const popularMatches = popularTerms
-          .filter(term => term.toLowerCase().includes(query.toLowerCase()))
-          .slice(0, 2);
-        
-        suggestions.push(...popularMatches);
-        
-        // Remove duplicates and limit to 5 suggestions
-        const uniqueSuggestions = Array.from(new Set(suggestions)).slice(0, 5);
-        setSearchSuggestions(uniqueSuggestions);
+      if (query.trim().length >= 3) {
+        fetchSongSuggestions(query);
       } else {
         setSearchSuggestions([]);
       }
-    }, 300); // Debounce for 300ms
+    }, 400); // Debounce for 400ms
 
     return () => clearTimeout(debounceTimer);
   }, [query, recentSearches]);
@@ -862,22 +874,6 @@ export default function Home() {
     }
   }
 
-  // Generate search suggestions
-  useEffect(() => {
-    if (query.trim().length > 1) {
-      // Mock suggestions - in a real app, you'd fetch these from an API
-      const mockSuggestions = [
-        `${query} songs`,
-        `${query} music`,
-        `${query} official`,
-        `${query} remix`,
-        `${query} live`,
-      ];
-      setSearchSuggestions(mockSuggestions);
-    } else {
-      setSearchSuggestions([]);
-    }
-  }, [query]);
 
   // Handle swipe gestures on mobile
   const minSwipeDistance = 50;
@@ -1474,6 +1470,29 @@ export default function Home() {
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => setShowSuggestions(true)}
                     onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        setActiveSuggestionIndex((prev) =>
+                          prev < searchSuggestions.length - 1 ? prev + 1 : prev
+                        );
+                      } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        setActiveSuggestionIndex((prev) => (prev > 0 ? prev - 1 : 0));
+                      } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        if (activeSuggestionIndex !== -1) {
+                          const suggestion = searchSuggestions[activeSuggestionIndex];
+                          setQuery(suggestion.title);
+                          search(suggestion.title);
+                          setShowSuggestions(false);
+                          setActiveSuggestionIndex(-1);
+                        }
+                      } else if (e.key === "Escape") {
+                        setShowSuggestions(false);
+                        setActiveSuggestionIndex(-1);
+                      }
+                    }}
                     placeholder="Search songs, albums, artists"
                     aria-label="Search"
                   />
@@ -1494,24 +1513,33 @@ export default function Home() {
                 </div>
                 
                 {/* Search Suggestions - Enhanced with modern styling */}
-                {showSuggestions && searchSuggestions.length > 0 && (
+                {showSuggestions && (
                   <div className={`absolute top-full left-0 right-0 mt-2 ${darkMode ? 'bg-gray-900/95' : 'bg-white/95'} backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden z-50 border ${darkMode ? 'border-gray-700/50' : 'border-gray-300/50'} slide-in-bottom`}>
-                    {searchSuggestions.map((suggestion, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => {
-                          setQuery(suggestion);
-                          search(suggestion);
-                          setShowSuggestions(false);
-                        }}
-                        className={`w-full text-left px-5 py-3.5 text-sm ${darkMode ? 'hover:bg-gray-800/70' : 'hover:bg-gray-100/70'} transition-all duration-200 flex items-center gap-3 ${index === 0 ? 'rounded-t-2xl' : ''} ${index === searchSuggestions.length - 1 ? 'rounded-b-2xl' : ''} hover:translate-x-1`}
-                      >
-                        <span className={`${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>🔍</span>
-                        <span className="flex-1">{suggestion}</span>
-                        <span className={`text-xs ${darkMode ? 'text-gray-600' : 'text-gray-400'} opacity-0 group-hover:opacity-100 transition-opacity`}>↵</span>
-                      </button>
-                    ))}
+                    {suggestionsLoading ? (
+                      <div className="p-4 text-center">Loading...</div>
+                    ) : suggestionsError ? (
+                      <div className="p-4 text-center text-red-500">{suggestionsError}</div>
+                    ) : (
+                      searchSuggestions.map((suggestion, index) => (
+                        <button
+                          key={suggestion.id}
+                          type="button"
+                          onClick={() => {
+                            setQuery(suggestion.title);
+                            search(suggestion.title);
+                            setShowSuggestions(false);
+                          }}
+                          className={`w-full text-left px-5 py-3.5 text-sm ${darkMode ? 'hover:bg-gray-800/70' : 'hover:bg-gray-100/70'} transition-all duration-200 flex items-center gap-3 ${index === 0 ? 'rounded-t-2xl' : ''} ${index === searchSuggestions.length - 1 ? 'rounded-b-2xl' : ''} hover:translate-x-1 ${index === activeSuggestionIndex ? (darkMode ? 'bg-gray-800/70' : 'bg-gray-100/70') : ''}`}
+                        >
+                          <img src={suggestion.thumbnail} alt={suggestion.title} className="w-10 h-10 rounded-md" />
+                          <div className="flex-1">
+                            <div>{suggestion.title}</div>
+                            <div className="text-xs text-gray-400">{suggestion.artist}</div>
+                          </div>
+                          <div className="text-xs text-gray-400">{suggestion.duration}</div>
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
               </form>
